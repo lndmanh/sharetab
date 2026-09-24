@@ -40,9 +40,6 @@ COPY --from=builder /app/.commit-sha ./.commit-sha
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./
 COPY --from=builder /app/src/generated ./src/generated
-# Copy meridian proxy (embedded, dynamically imported — not traced by Next.js bundler)
-COPY --from=builder /app/node_modules/@rynfar/meridian ./node_modules/@rynfar/meridian
-COPY --from=builder /app/node_modules/@anthropic-ai/claude-agent-sdk ./node_modules/@anthropic-ai/claude-agent-sdk
 # Install Prisma CLI in isolated dir to avoid conflict with standalone node_modules
 WORKDIR /prisma-cli
 RUN npm init -y && \
@@ -50,21 +47,19 @@ RUN npm init -y && \
 WORKDIR /app
 
 COPY docker/entrypoint.sh /app/entrypoint.sh
-COPY docker/claude /usr/local/bin/claude
 
 # Create directories
-RUN mkdir -p /app/uploads/receipts /app/chatgpt /var/lib/postgresql/data /run/postgresql && \
+RUN mkdir -p /app/uploads/receipts /var/lib/postgresql/data /run/postgresql && \
     chown -R nextjs:nodejs /app/uploads && \
-    chown -R nextjs:nodejs /app/chatgpt && \
     chown -R postgres:postgres /var/lib/postgresql/data /run/postgresql && \
-    chmod +x /app/entrypoint.sh /usr/local/bin/claude
+    chmod +x /app/entrypoint.sh
 
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 ENV PGDATA=/var/lib/postgresql/data
 
-VOLUME ["/var/lib/postgresql/data", "/app/uploads", "/app/claude", "/app/chatgpt"]
+VOLUME ["/var/lib/postgresql/data", "/app/uploads"]
 
 # start-period covers first-boot initdb + user creation + schema push
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=60s \

@@ -8,8 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, FlaskConical, Upload, CheckCircle2, AlertCircle, X } from 'lucide-react';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-const OAUTH_PROVIDERS = new Set(['meridian', 'openai-codex']);
-const KNOWN_PROVIDERS = new Set(['openai', 'openai-codex', 'claude', 'meridian', 'ollama']);
 
 export function AIProviderTestSection() {
   const t = useTranslations('admin');
@@ -23,9 +21,9 @@ export function AIProviderTestSection() {
   const [file, setFile] = useState<{ name: string; base64: string; mimeType: string } | null>(null);
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
 
-  const allProviders = health.data?.aiProvider?.split(' -> ').filter(Boolean) ?? [];
-
-  const nonOAuthProviders = allProviders.filter((p) => KNOWN_PROVIDERS.has(p) && !OAUTH_PROVIDERS.has(p));
+  const nonOAuthProviders = (health.data?.aiProvider?.split(' -> ').filter(Boolean) ?? []).filter(
+    (p) => p === 'openai',
+  );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];

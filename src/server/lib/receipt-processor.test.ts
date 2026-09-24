@@ -60,7 +60,7 @@ describe('processReceiptImage fallback behavior', () => {
 
   test('falls back to next provider when first extraction fails', async () => {
     const provider1 = {
-      name: 'openai-codex',
+      name: 'openai',
       extractReceipt: vi.fn().mockRejectedValue(new Error('expired')),
     };
     const provider2 = {
@@ -90,11 +90,11 @@ describe('processReceiptImage fallback behavior', () => {
 
   test('clears provider cache and retries provider list on first full-pass failure', async () => {
     const badProvider = {
-      name: 'openai-codex',
+      name: 'openai',
       extractReceipt: vi.fn().mockRejectedValue(new Error('auth expired')),
     };
     const recoveredProvider = {
-      name: 'openai-codex',
+      name: 'openai',
       extractReceipt: vi.fn().mockResolvedValue(successResult),
     };
 
@@ -116,7 +116,7 @@ describe('processReceiptImage fallback behavior', () => {
 
   test('throws after both fallback passes fail', async () => {
     const badProvider = {
-      name: 'openai-codex',
+      name: 'openai',
       extractReceipt: vi.fn().mockRejectedValue(new Error('still expired')),
     };
     mockGetAIProvidersWithFallback.mockResolvedValue([badProvider]);

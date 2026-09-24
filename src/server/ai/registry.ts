@@ -1,7 +1,6 @@
 import type { AIProvider } from './provider';
 
-const USER_SELECTABLE_PROVIDERS = ['openai', 'openai-codex', 'claude', 'meridian', 'ollama'] as const;
-
+const USER_SELECTABLE_PROVIDERS = ['openai'] as const;
 const ALL_PROVIDERS = [...USER_SELECTABLE_PROVIDERS, 'mock'] as const;
 
 type AIProviderName = (typeof ALL_PROVIDERS)[number];
@@ -56,28 +55,6 @@ async function createProvider(name: AIProviderName): Promise<AIProvider> {
       const { OpenAIProvider } = await import('./providers/openai');
       return new OpenAIProvider(process.env.OPENAI_API_KEY, process.env.OPENAI_MODEL);
     }
-    case 'openai-codex': {
-      const { OpenAICodexProvider } = await import('./providers/openai-codex');
-      return new OpenAICodexProvider(process.env.OPENAI_CODEX_MODEL);
-    }
-    case 'claude': {
-      const { ClaudeProvider } = await import('./providers/claude');
-      if (!process.env.ANTHROPIC_API_KEY) {
-        throw new Error('Claude provider requires ANTHROPIC_API_KEY');
-      }
-      return new ClaudeProvider(process.env.ANTHROPIC_API_KEY);
-    }
-    case 'meridian': {
-      const { MeridianProvider } = await import('./providers/meridian');
-      return new MeridianProvider();
-    }
-    case 'ollama': {
-      const { OllamaProvider } = await import('./providers/ollama');
-      return new OllamaProvider(
-        process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434',
-        process.env.OLLAMA_MODEL ?? 'llava',
-      );
-    }
     case 'mock': {
       const { MockProvider } = await import('./providers/mock');
       return new MockProvider();
@@ -101,14 +78,8 @@ export function getConfiguredProviderPriority(): string[] {
   return getConfiguredProviderPriorityInternal();
 }
 
-export function isProviderConfigured(name: string): boolean {
-  return getConfiguredProviderPriorityInternal().includes(name as AIProviderName);
-}
-
 export async function getAIProvider(): Promise<AIProvider> {
   const [first] = getConfiguredProviderPriorityInternal();
-  // parseProviderPriority() throws rather than returning an empty array, so
-  // this is unreachable — guards the destructure for noUncheckedIndexedAccess.
   if (!first) {
     throw new Error('AI_PROVIDER_PRIORITY resolved to an empty list');
   }

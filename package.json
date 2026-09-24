@@ -36,7 +36,6 @@
     "test:watch": "vitest",
     "test:e2e": "npx playwright test",
     "test:e2e:ui": "npx playwright test --ui",
-    "test:ai:setup": "npx tsx e2e/ai-setup.ts",
     "test:ai": "RUN_AI_TESTS=1 npx playwright test ai-provider-test.spec.ts",
     "demo": "tsx e2e/demo-video.ts",
     "demo:gifs": "tsx e2e/demo-gifs.ts",
@@ -46,19 +45,16 @@
     "seed": "npx tsx prisma/seed.ts"
   },
   "overrides": {
-    "@anthropic-ai/sdk": "^0.93.0",
     "@hono/node-server": ">=1.19.13",
     "hono": ">=4.12.21",
     "postcss": ">=8.5.10",
     "fast-uri": ">=3.1.1"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.93.0",
     "@auth/prisma-adapter": "^2.11.1",
     "@base-ui/react": "^1.8.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
-    "@rynfar/meridian": "^1.71.0",
     "@tanstack/react-query": "^5.102.8",
     "@trpc/client": "^11.18.0",
     "@trpc/react-query": "^11.18.0",

@@ -16,9 +16,6 @@ import { AIStatsSection } from '@/components/admin/ai-stats-section';
 import { AIProviderTestSection } from '@/components/admin/ai-provider-test-section';
 import { ToolsSection } from '@/components/admin/tools-section';
 import { ServerLogsSection } from '@/components/admin/server-logs-section';
-import { AuthExpiryNotificationsSection } from '@/components/admin/auth-expiry-notifications-section';
-import { MeridianAuthSection } from '@/components/admin/meridian-auth-section';
-import { OpenAICodexAuthSection } from '@/components/admin/openai-codex-auth-section';
 import { UserManagementSection } from '@/components/admin/user-management-section';
 import { GroupOverviewSection } from '@/components/admin/group-overview-section';
 import { VenmoSettingsSection } from '@/components/admin/venmo-settings-section';
@@ -37,9 +34,6 @@ export default function AdminPage() {
 
       <div className="grid gap-6 [&>*]:min-w-0">
         <SystemHealthSection />
-        <MeridianAuthSection />
-        <OpenAICodexAuthSection />
-        <AuthExpiryNotificationsSection />
         <Separator />
         <UserManagementSection {...(currentUserEmail !== undefined ? { currentUserEmail } : {})} />
         <Separator />

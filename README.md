@@ -117,7 +117,7 @@ ShareTab is a free, self-hosted alternative to Splitwise for tracking shared exp
 - **Group expense tracking** with multiple split modes (equal, percentage, shares, exact, item-level)
 - **AI receipt scanning** -- photograph a receipt, AI extracts line items, assign items to group members with proportional tax/tip; zoomable/pannable receipt viewer; rescan with correction prompts
 - **Guest bill splitting** -- no account needed, shareable summary links
-- **Pluggable AI providers** -- OpenAI (GPT-4o), OpenAI-Codex (ChatGPT OAuth), Claude (API key), Meridian (Claude Max subscription), local Ollama
+- **AI receipt scanning** -- OpenAI (API key, GPT-4o by default)
 - **Group archiving** -- archive inactive groups to declutter your dashboard; toggle archived view on groups page
 - **Cross-group dashboard** -- see all your balances at a glance, with per-person debt breakdown
 - **Debt simplification** -- minimize the number of payments needed
@@ -220,65 +220,13 @@ All configuration is done through environment variables. Copy `.env.example` to 
 
 ### AI Receipt Scanning
 
-| Variable                 | Description                                                                                                                                                                                                        |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `AI_PROVIDER_PRIORITY`   | Comma-separated provider priority list (for example `openai-codex,meridian,openai`). ShareTab checks providers in order, uses the first available one, and falls through to the next provider if extraction fails. |
-| `OPENAI_API_KEY`         | Required when `openai` is included in `AI_PROVIDER_PRIORITY`.                                                                                                                                                      |
-| `OPENAI_MODEL`           | OpenAI model for receipt scanning. Defaults to `gpt-4o`.                                                                                                                                                           |
-| `OPENAI_CODEX_MODEL`     | Model for ChatGPT OAuth / Codex backend receipt scanning. Defaults to `gpt-5.4`.                                                                                                                                   |
-| `ANTHROPIC_API_KEY`      | Required when `claude` is included in `AI_PROVIDER_PRIORITY`.                                                                                                                                                      |
-| `ANTHROPIC_MODEL`        | Claude model for receipt scanning. Defaults to `claude-sonnet-4-6` (claude provider) or `claude-opus-4-6` (meridian provider).                                                                                     |
-| `ANTHROPIC_HEALTH_MODEL` | Model for health-check probes (auth verification). Defaults to `claude-haiku-4-5-20251001`.                                                                                                                        |
-| `MERIDIAN_PORT`          | Port for the embedded Meridian proxy. Defaults to `3457`.                                                                                                                                                          |
-| `OLLAMA_BASE_URL`        | Ollama server URL. Defaults to `http://localhost:11434`.                                                                                                                                                           |
-| `OLLAMA_MODEL`           | Ollama model name. Defaults to `llava`.                                                                                                                                                                            |
+Receipt scanning uses the OpenAI API. Set `OPENAI_API_KEY` and optionally `OPENAI_MODEL` (default `gpt-4o`).
 
-The `openai-codex` provider uses ChatGPT OAuth via the Codex backend instead of an API key. Auth data lives in `/app/chatgpt`, so if that path is on a persistent volume the login survives restarts and image updates.
-
-After the container is running, open the ShareTab admin dashboard and complete the ChatGPT OAuth flow there:
-
-1. Sign in as the admin user and open `/admin`.
-2. In the ChatGPT OAuth section, start the login flow.
-3. Authorize with ChatGPT in your browser.
-4. When the flow redirects to `http://localhost:1455/auth/callback`, copy the full URL from the browser address bar and paste it back into ShareTab.
-
-If you use your own Docker or Unraid template, mount a persistent path to `/app/chatgpt` when `openai-codex` is in `AI_PROVIDER_PRIORITY`.
-
-The `meridian` provider uses a Claude Max/Pro subscription via an embedded proxy -- no API key needed. Claude login data lives in `/app/claude`, so if that path is on a persistent volume the login survives restarts and image updates.
-
-After the container is running, open the ShareTab admin dashboard and complete the Meridian login flow there:
-
-1. Sign in as the admin user and open `/admin`.
-2. In the Meridian auth section, start the login flow.
-3. Authorize with Claude in your browser.
-4. Copy the full callback URL from the browser address bar and paste it back into ShareTab.
-
-The bundled Docker Compose setup persists `/app/claude` automatically. If you use your own Docker or Unraid template, mount a persistent path to `/app/claude`.
-
-**⚠️ OCR provider (removed):** The `ocr` provider (Tesseract.js) was originally included as a free fallback for users without AI API access, but after extensive testing across hundreds of real-world receipts, the accuracy was too unreliable for production use. Common failures included extracting modifiers as line items, failing to exclude delivery fees, and poor handling of non-standard receipt layouts. The OCR provider has been removed from the codebase. Existing configs that include `ocr` in `AI_PROVIDER_PRIORITY` will silently ignore it. If you need reliable receipt scanning, configure one of the AI providers above (openai-codex or meridian are recommended). Community contributions to reintroduce OCR with improved accuracy are welcome.
-
-### AI Provider Performance
-
-Benchmarked on a set of receipt photos (grocery, coffee shop, restaurant). Results represent typical single-receipt extraction.
-
-| Provider                         | Speed  | Item Accuracy | Cost                                | Notes                                                            |
-| -------------------------------- | ------ | ------------- | ----------------------------------- | ---------------------------------------------------------------- |
-| **OpenAI Codex** (ChatGPT OAuth) | ~6 s   | 5/5 items     | Free (uses ChatGPT subscription)    | **Recommended.** Best balance of speed and accuracy.             |
-| **Meridian** (Claude OAuth)      | ~16 s  | 5/5 items     | Free (uses Claude Max subscription) | Same accuracy, but 2–3x slower.                                  |
-| **OpenAI** (API key)             | ~4 s   | 5/5 items     | Pay-per-token                       | Fastest, but requires an API key and costs money.                |
-| **Ollama** (local LLM)           | Varies | Varies        | Free, fully local                   | Depends on model and hardware. Requires a running Ollama server. |
-
-**Recommendation:** Use `openai-codex` as your primary provider. It delivers the same accuracy as API-key providers at no additional cost (it piggybacks on your existing ChatGPT Plus/Pro subscription). Set your priority to:
-
-```
-AI_PROVIDER_PRIORITY="openai-codex"
-```
-
-If you also have a Claude Max subscription, you can add `meridian` as a fallback:
-
-```
-AI_PROVIDER_PRIORITY="openai-codex,meridian"
-```
+| Variable               | Description                                                          |
+| ---------------------- | -------------------------------------------------------------------- |
+| `OPENAI_API_KEY`       | OpenAI API key. Required for receipt scanning.                       |
+| `OPENAI_MODEL`         | OpenAI model for receipt scanning. Defaults to `gpt-4o`.             |
+| `AI_PROVIDER_PRIORITY` | `openai` (default). `mock` is for tests and returns fixture data.    |
 
 ### OAuth (optional)
 
@@ -291,7 +239,7 @@ AI_PROVIDER_PRIORITY="openai-codex,meridian"
 
 | Variable                | Description                                                                                                             |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `EMAIL_SERVER_HOST`     | SMTP host (e.g. `smtp.gmail.com`). Used for magic link sign-in and OAuth auth expiry alerts (Meridian / ChatGPT OAuth). |
+| `EMAIL_SERVER_HOST`     | SMTP host (e.g. `smtp.gmail.com`). Used for magic link sign-in. |
 | `EMAIL_SERVER_PORT`     | SMTP port. Use `465` for implicit TLS, `587` for STARTTLS.                                                              |
 | `EMAIL_SERVER_USER`     | SMTP username / email address.                                                                                          |
 | `EMAIL_SERVER_PASSWORD` | SMTP password or app password.                                                                                          |
@@ -301,7 +249,7 @@ AI_PROVIDER_PRIORITY="openai-codex,meridian"
 
 | Variable      | Description                                                                                                                                                                            |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ADMIN_EMAIL` | Email of the admin user. Grants access to `/admin` dashboard for managing users, groups, storage, and system settings, and receives OAuth auth expiry alerts when email is configured. |
+| `ADMIN_EMAIL` | Email of the admin user. Grants access to `/admin` dashboard for managing users, groups, storage, and system settings. |
 
 ### Other
 
@@ -328,7 +276,7 @@ AI_PROVIDER_PRIORITY="openai-codex,meridian"
 | Database  | [Prisma 7](https://www.prisma.io) + PostgreSQL 16                                                                                         |
 | Auth      | [NextAuth v5](https://authjs.dev) (credentials + OAuth + magic link)                                                                      |
 | UI        | [TailwindCSS 4](https://tailwindcss.com) + [shadcn/ui](https://ui.shadcn.com) + [next-themes](https://github.com/pacocoursey/next-themes) |
-| AI        | Pluggable providers: OpenAI, OpenAI-Codex, Claude, Meridian, Ollama                                                                       |
+| AI        | OpenAI API (receipt scanning)                                                                                                             |
 | Testing   | [Vitest](https://vitest.dev) (unit) + [Playwright](https://playwright.dev) (e2e)                                                          |
 
 ## Development

@@ -13,7 +13,7 @@ ShareTab — open-source, self-hosted Splitwise alternative with AI receipt scan
 - **ORM:** Prisma 7 + PostgreSQL 16 (via `@prisma/adapter-pg`)
 - **Auth:** NextAuth v5 (email/password + OAuth)
 - **UI:** TailwindCSS 4 + shadcn/ui (v4, uses `@base-ui/react` — use `render` prop instead of `asChild`) + next-themes (dark mode)
-- **AI:** Pluggable providers (OpenAI, OpenAI-Codex, Claude, Meridian, Ollama) via `src/server/ai/`
+- **AI:** OpenAI API key via `src/server/ai/` (`OPENAI_API_KEY`, optional `OPENAI_MODEL`)
 - **i18n:** next-intl (9 locales: en, es, sv, fr, de, pt-BR, ja, zh-CN, ko)
 
 ## Commands
@@ -94,7 +94,7 @@ npx prisma db push   # Push schema without migration (dev only)
 
 - `npm test` — run all unit tests (~278 tests, <1s)
 - Tests live co-located with source: `src/**/*.test.ts`
-- Covers: `money.ts`, `split-calculator.ts`, `rate-limit.ts`, `upload-dir.ts`, `balance-calculator.ts`, `ai/registry.ts`, `ai/providers/openai-codex.ts`, `lib/normalize-date.ts`, `lib/meridian-login.ts`, `lib/receipt-processor.ts`, `lib/auth-health-poller.ts`, `lib/openai-codex-login.ts`, `trpc/routers/admin.ts`
+- Covers: `money.ts`, `split-calculator.ts`, `rate-limit.ts`, `upload-dir.ts`, `balance-calculator.ts`, `ai/registry.ts`, `lib/normalize-date.ts`, `lib/receipt-processor.ts`, `trpc/routers/admin.ts`
 
 ### E2E Tests (Playwright)
 
