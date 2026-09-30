@@ -1,50 +1,11 @@
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
+  runtime  = "cloudflare"
 }
 
 datasource db {
-  provider = "postgresql"
-}
-
-// ─── AUTH (NextAuth managed) ───────────────────────────────
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@index([userId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
+  provider = "sqlite"
 }
 
 // ─── CORE MODELS ───────────────────────────────────────────
@@ -53,19 +14,14 @@ model User {
   id              String    @id @default(cuid())
   name            String?
   email           String    @unique
-  emailVerified   DateTime?
-  passwordHash    String?
   image           String?
-  defaultCurrency String    @default("USD")
+  defaultCurrency String    @default("VND")
   locale          String    @default("en")
   venmoUsername   String?
-  suspendedAt     DateTime?
   isPlaceholder   Boolean   @default(false)
   placeholderName String?
   createdByUserId String?
 
-  accounts        Account[]
-  sessions        Session[]
   groupMembers    GroupMember[]
   expensesPaid    Expense[]          @relation("PaidBy")
   expensesAdded   Expense[]          @relation("AddedBy")
@@ -74,7 +30,6 @@ model User {
   settlementsFor  Settlement[]       @relation("SettledFor")
   activityLogs    ActivityLog[]
   adminAuditLogs  AdminAuditLog[] @relation("AdminAuditLogs")
-  systemInvitesUsed SystemInvite[] @relation("SystemInviteUsedBy")
   uploadedReceipts Receipt[] @relation("UploadedReceipts")
   guestSplits      GuestSplit[] @relation("GuestSplits")
 
@@ -85,8 +40,8 @@ model User {
 model Group {
   id            String  @id @default(cuid())
   name          String
-  description   String? @db.Text
-  currency      String  @default("USD")
+  description   String?
+  currency      String  @default("VND")
   emoji         String? @default("💰")
   simplifyDebts Boolean @default(true)
   archivedAt    DateTime?
@@ -94,7 +49,6 @@ model Group {
   members      GroupMember[]
   expenses     Expense[]
   settlements  Settlement[]
-  invites      GroupInvite[]
   activityLogs ActivityLog[]
   receipts     Receipt[]
 
@@ -117,24 +71,6 @@ model GroupMember {
   @@index([groupId])
 }
 
-model GroupInvite {
-  id        String    @id @default(cuid())
-  groupId   String
-  email     String?
-  token     String    @unique @default(cuid())
-  expiresAt DateTime
-  usedAt    DateTime?
-  usedById  String?
-
-  placeholderUserId String?  // if set, auto-merge this placeholder when invite is used
-
-  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  @@index([groupId])
-}
-
 enum GroupRole {
   OWNER
   ADMIN
@@ -145,11 +81,12 @@ enum GroupRole {
 
 model Expense {
   id          String    @id @default(cuid())
+  revision    Int       @default(0)
   groupId     String
   title       String
-  description String?   @db.Text
+  description String?
   amount      Int       // total in cents (in expense currency)
-  currency    String    @default("USD")
+  currency    String    @default("VND")
   exchangeRate        Float   @default(1.0) // rate: 1 unit of expense currency = X units of group currency
   baseCurrencyAmount  Int?    // amount converted to group currency (cents); null = same currency
   category    String?
@@ -268,7 +205,7 @@ model Settlement {
   fromId   String
   toId     String
   amount   Int     // cents (in settlement currency)
-  currency String  @default("USD")
+  currency String  @default("VND")
   exchangeRate        Float   @default(1.0) // rate: 1 unit of settlement currency = X units of group currency
   baseCurrencyAmount  Int?    // amount converted to group currency (cents); null = same currency
   note     String?
@@ -365,23 +302,9 @@ enum AdminAction {
 
 model SystemSetting {
   key   String @id
-  value String @db.Text
+  value String
 
   updatedAt DateTime @updatedAt
-}
-
-model SystemInvite {
-  id        String    @id @default(cuid())
-  code      String    @unique @default(cuid())
-  label     String?   // optional friendly name
-  usedById  String?
-  usedAt    DateTime?
-  expiresAt DateTime?
-  revokedAt DateTime?
-
-  usedBy User? @relation("SystemInviteUsedBy", fields: [usedById], references: [id], onDelete: SetNull)
-
-  createdAt DateTime @default(now())
 }
 
 enum GuestSplitStatus {
@@ -393,6 +316,7 @@ enum GuestSplitStatus {
 
 model GuestSplit {
   id          String   @id @default(cuid())
+  revision    Int      @default(0)
   shareToken  String   @unique @default(cuid())
   receiptId   String?
   receiptData Json     // {merchantName, date, subtotal, tax, tip, total, currency}
