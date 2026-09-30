@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useState, useMemo, useEffect, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useOperator } from '@/lib/operator-client';
 import { useLocale, useTranslations } from 'next-intl';
 import { trpc } from '@/lib/trpc';
 import { formatCents } from '@/lib/money';
@@ -76,11 +76,11 @@ export default function ClaimPage({ params }: { params: Promise<{ token: string 
   const [splitQty, setSplitQty] = useState('');
   const [venmoHandle, setVenmoHandle] = useState('');
   const venmoInitRef = useRef(false);
-  const { data: authSession, status: authStatus } = useSession();
+  const { data: authSession, status: authStatus } = useOperator();
 
   // --- tRPC ---
   const venmoSetting = trpc.admin.getVenmoEnabled.useQuery();
-  const profile = trpc.auth.getProfile.useQuery(undefined, {
+  const profile = trpc.profile.getProfile.useQuery(undefined, {
     enabled: !!authSession?.user && !!venmoSetting.data?.enabled,
   });
   const utils = trpc.useUtils();
@@ -1209,10 +1209,6 @@ export default function ClaimPage({ params }: { params: Promise<{ token: string 
       <div className="text-center">
         <Link href="/split" className="text-sm font-medium text-primary hover:underline">
           {t('splitYourOwn')}
-        </Link>
-        <span className="text-muted-foreground mx-2">{t('or')}</span>
-        <Link href="/register" className="text-sm font-medium text-primary hover:underline">
-          {t('createAccount')}
         </Link>
       </div>
 

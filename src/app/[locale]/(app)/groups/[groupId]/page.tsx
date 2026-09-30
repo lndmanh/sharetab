@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useState, useRef, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useOperator } from '@/lib/operator-client';
 import { useLocale, useTranslations } from 'next-intl';
 import { trpc } from '@/lib/trpc';
 import { formatCents } from '@/lib/money';
@@ -12,17 +12,15 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { Plus, Settings, UserPlus, ArrowRight, Receipt, Handshake, Camera, Tag, Archive, Trash2 } from 'lucide-react';
+import { Plus, Settings, ArrowRight, Receipt, Handshake, Camera, Tag, Archive, Trash2 } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { toast } from 'sonner';
-import { InviteDialog } from '@/components/groups/invite-dialog';
 import { SettleDialog } from '@/components/groups/settle-dialog';
 import { getInitials, avatarColor } from '@/lib/avatar';
 
 export default function GroupDetailPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = use(params);
   const locale = useLocale();
-  const [showInvite, setShowInvite] = useState(false);
   const [settleState, setSettleState] = useState<{
     open: boolean;
     from?: string;
@@ -31,7 +29,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
   }>({ open: false });
 
   const t = useTranslations('groups');
-  const { data: authSession } = useSession();
+  const { data: authSession } = useOperator();
   const group = trpc.groups.get.useQuery({ groupId });
   const expenses = trpc.expenses.list.useQuery({ groupId, limit: 10 });
   const debts = trpc.balances.getSimplifiedDebts.useQuery({ groupId });
@@ -95,10 +93,6 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowInvite(true)}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            {t('detail.invite')}
-          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -396,8 +390,6 @@ export default function GroupDetailPage({ params }: { params: Promise<{ groupId:
           </Card>
         )}
       </div>
-
-      <InviteDialog groupId={groupId} open={showInvite} onOpenChange={setShowInvite} />
 
       <SettleDialog
         groupId={groupId}

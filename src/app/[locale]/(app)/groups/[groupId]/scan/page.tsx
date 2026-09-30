@@ -9,11 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Loader2, Camera, RefreshCw, Users } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { ArrowLeft, Loader2, Camera, RefreshCw, Users, Pencil } from 'lucide-react';
+import { useOperator } from '@/lib/operator-client';
 import { toast } from 'sonner';
 import { ItemAssignment } from '@/components/receipts/item-assignment';
 import { loadingMessageKeys } from '@/lib/loading-messages';
+import { parseUploadResponse, uploadError } from '@/lib/upload-response';
 
 type Step = 'upload' | 'processing' | 'assign' | 'error';
 
@@ -31,7 +32,7 @@ function ScanReceiptContent({ params }: { params: Promise<{ groupId: string }> }
   const searchParams = useSearchParams();
   const t = useTranslations('expenses.scan');
   const tc = useTranslations('common');
-  const { data: authSession } = useSession();
+  const { data: authSession } = useOperator();
   const resumeReceiptId = searchParams.get('receiptId');
   const group = trpc.groups.get.useQuery({ groupId });
   const providerInfo = trpc.receipts.getScanProviderInfo.useQuery();
@@ -91,7 +92,7 @@ function ScanReceiptContent({ params }: { params: Promise<{ groupId: string }> }
           tax: extracted.tax,
           tip: extracted.tip ?? 0,
           total: extracted.total ?? extracted.subtotal + extracted.tax + (extracted.tip ?? 0),
-          currency: extracted.currency ?? 'USD',
+          currency: extracted.currency ?? 'VND',
         },
         items: items.map((i) => ({
           name: i.name,
@@ -128,12 +129,12 @@ function ScanReceiptContent({ params }: { params: Promise<{ groupId: string }> }
         let message = t('uploadFailed');
         try {
           const data = await res.json();
-          message = data.error ?? message;
+          message = uploadError(data, message);
         } catch {}
         throw new Error(message);
       }
 
-      const data = await res.json();
+      const data = parseUploadResponse(await res.json());
       setReceiptId(data.receiptId);
       setStep('processing');
       setUploading(false);
@@ -232,6 +233,16 @@ function ScanReceiptContent({ params }: { params: Promise<{ groupId: string }> }
                 data-testid="scan-file-input"
               />
             </div>
+
+            <Button
+              variant="outline"
+              className="w-full"
+              nativeButton={false}
+              render={<Link href={`/groups/${groupId}/expenses/new`} />}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              {t('enterManually')}
+            </Button>
 
             {uploading && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">

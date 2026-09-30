@@ -49,7 +49,7 @@ export default function NewExpensePage({ params }: { params: Promise<{ groupId: 
   const [useManualRate, setUseManualRate] = useState(false);
 
   // Initialize currency from group when data loads
-  const groupCurrency = group.data?.currency ?? 'USD';
+  const groupCurrency = group.data?.currency ?? 'VND';
   const effectiveCurrency = currency || groupCurrency;
   const isDifferentCurrency = effectiveCurrency.toUpperCase() !== groupCurrency.toUpperCase();
 
@@ -311,7 +311,7 @@ export default function NewExpensePage({ params }: { params: Promise<{ groupId: 
             <Button
               type="submit"
               className="w-full"
-              disabled={createExpense.isPending || amountCents <= 0 || shares.length === 0}
+              disabled={createExpense.isPending || !paidById || amountCents <= 0 || shares.length === 0}
             >
               {createExpense.isPending ? t('new.submitting') : t('new.submit')}
             </Button>

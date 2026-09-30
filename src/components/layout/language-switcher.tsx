@@ -15,7 +15,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { trpc } from '@/lib/trpc';
-import { useSession } from 'next-auth/react';
 
 function setLocaleCookie(locale: string) {
   const secure = window.location.protocol === 'https:' ? ';secure' : '';
@@ -35,17 +34,14 @@ function LanguageSwitcherInner() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
   const t = useTranslations('common');
 
-  const updateLocale = trpc.auth.updateProfile.useMutation();
+  const updateLocale = trpc.profile.updateProfile.useMutation();
 
   function handleLocaleChange(newLocale: Locale) {
     setLocaleCookie(newLocale);
 
-    if (session?.user) {
-      updateLocale.mutate({ locale: newLocale });
-    }
+    updateLocale.mutate({ locale: newLocale });
 
     const qs = searchParams.toString();
     const href = qs ? `${pathname}?${qs}` : pathname;

@@ -39,7 +39,7 @@ export default function ExpenseDetailPage({ params }: { params: Promise<{ groupI
   }
 
   const e = expense.data;
-  const groupCurrency = group.data?.currency ?? 'USD';
+  const groupCurrency = group.data?.currency ?? 'VND';
   const isCurrencyConverted = e.baseCurrencyAmount != null && e.currency.toUpperCase() !== groupCurrency.toUpperCase();
 
   return (

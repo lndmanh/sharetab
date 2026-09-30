@@ -1,38 +1,14 @@
 'use client';
+/* eslint-disable @next/next/no-html-link-for-pages -- Access logout is outside the app router. */
 
 import { Link, usePathname } from '@/i18n/navigation';
-import { signOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LayoutDashboard, Users, Receipt, LogOut, Settings, Shield, Heart, Scissors } from 'lucide-react';
+import { LayoutDashboard, Users, Receipt, LogOut, Settings, Shield, Scissors } from 'lucide-react';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
 import { LanguageSwitcher } from '@/components/layout/language-switcher';
-import { useTranslations, useLocale } from 'next-intl';
-
-function SponsorBanner() {
-  const t = useTranslations('common');
-  return (
-    <div className="shrink-0 px-3 pb-2">
-      <div className="rounded-lg border border-pink-500/20 bg-gradient-to-br from-pink-500/10 via-rose-500/5 to-transparent p-3">
-        <div className="flex items-center gap-2 mb-1.5">
-          <Heart className="h-3.5 w-3.5 text-pink-500 shrink-0" />
-          <span className="text-xs font-semibold text-foreground">{t('sponsor.title')}</span>
-        </div>
-        <p className="text-xs text-muted-foreground mb-2.5 leading-relaxed">{t('sponsor.description')}</p>
-        <a
-          href="https://github.com/sponsors/sw-carlos-cristobal"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 w-full rounded-md bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20 px-2.5 py-1.5 text-xs font-medium text-pink-600 dark:text-pink-400 transition-colors"
-        >
-          <Heart className="h-3 w-3" />
-          {t('sponsor.cta')}
-        </a>
-      </div>
-    </div>
-  );
-}
+import { useTranslations } from 'next-intl';
 
 const navItems = [
   { href: '/dashboard', key: 'dashboard', icon: LayoutDashboard },
@@ -51,7 +27,6 @@ type SidebarUser = {
 export function AppSidebar({ user, isAdmin }: { user: SidebarUser; isAdmin?: boolean }) {
   const pathname = usePathname();
   const t = useTranslations('common');
-  const locale = useLocale();
 
   const initials = user.name
     ? user.name
@@ -107,9 +82,6 @@ export function AppSidebar({ user, isAdmin }: { user: SidebarUser; isAdmin?: boo
         )}
       </nav>
 
-      {/* Sponsor banner */}
-      <SponsorBanner />
-
       {/* User profile section */}
       <div className="shrink-0 border-t border-transparent [border-image:linear-gradient(to_right,transparent,var(--color-border),transparent)_1] p-3">
         <div className="flex items-center gap-3 rounded-lg px-3 py-2">
@@ -135,7 +107,8 @@ export function AppSidebar({ user, isAdmin }: { user: SidebarUser; isAdmin?: boo
               variant="ghost"
               size="xs"
               className="gap-2 text-muted-foreground"
-              onClick={() => signOut({ callbackUrl: `/${locale}/login` })}
+              nativeButton={false}
+              render={<a href="/cdn-cgi/access/logout" />}
             >
               <LogOut className="h-3.5 w-3.5" />
               {t('nav.signOut')}

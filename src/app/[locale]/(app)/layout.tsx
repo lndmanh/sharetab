@@ -1,9 +1,7 @@
-import { redirect } from 'next/navigation';
-import { auth } from '@/server/auth';
+import { getOperator } from '@/server/operator';
 import { AppSidebar } from '@/components/layout/sidebar';
 import { MobileHeader } from '@/components/layout/mobile-header';
 import { AnnouncementBanner } from '@/components/layout/announcement-banner';
-import { ImpersonationBanner } from '@/components/layout/impersonation-banner';
 
 export default async function AppLayout({
   children,
@@ -12,20 +10,14 @@ export default async function AppLayout({
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }) {
-  const { locale } = await params;
-  const session = await auth();
-  if (!session?.user) {
-    redirect(`/${locale}/login`);
-  }
-
-  const isAdmin = !!process.env.ADMIN_EMAIL && session.user.email === process.env.ADMIN_EMAIL;
+  await params;
+  const operator = await getOperator();
 
   return (
     <div className="min-h-dvh lg:flex lg:h-dvh lg:flex-row">
-      <MobileHeader isAdmin={isAdmin} />
-      <AppSidebar user={session.user} isAdmin={isAdmin} />
+      <MobileHeader isAdmin />
+      <AppSidebar user={operator.user} isAdmin />
       <main className="@container flex-1 min-w-0 lg:overflow-auto">
-        <ImpersonationBanner />
         <AnnouncementBanner />
         <div className="w-full py-4 px-4 md:py-6 md:px-8 2xl:mx-auto 2xl:max-w-5xl">{children}</div>
       </main>

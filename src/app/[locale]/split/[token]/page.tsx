@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useOperator } from '@/lib/operator-client';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { trpc } from '@/lib/trpc';
 import { formatCents } from '@/lib/money';
@@ -24,10 +24,10 @@ export default function SharedSplitPage({ params }: { params: Promise<{ token: s
   const tv = useTranslations('split.venmo');
   const tc = useTranslations('common');
   const format = useFormatter();
-  const { data: authSession } = useSession();
+  const { data: authSession } = useOperator();
   const split = trpc.guest.getSplit.useQuery({ token });
   const venmoSetting = trpc.admin.getVenmoEnabled.useQuery();
-  const profile = trpc.auth.getProfile.useQuery(undefined, {
+  const profile = trpc.profile.getProfile.useQuery(undefined, {
     enabled: !!authSession?.user && !!venmoSetting.data?.enabled,
   });
   const utils = trpc.useUtils();
@@ -270,10 +270,6 @@ export default function SharedSplitPage({ params }: { params: Promise<{ token: s
       <div className="text-center">
         <Link href="/split" className="text-sm font-medium text-primary hover:underline">
           {t('splitYourOwn')}
-        </Link>
-        <span className="text-muted-foreground mx-2">{t('or')}</span>
-        <Link href="/register" className="text-sm font-medium text-primary hover:underline">
-          {t('createAccount')}
         </Link>
       </div>
 

@@ -92,7 +92,7 @@ export default function DashboardPage() {
   // the zero totals show the first *displayed* group's currency; perGroup
   // comes from an unordered query and its index 0 is arbitrary.
   const aggregateCurrency =
-    groupCurrencies.size === 1 ? [...groupCurrencies][0]! : (groups.data?.[0]?.currency ?? 'USD');
+    groupCurrencies.size === 1 ? [...groupCurrencies][0]! : (groups.data?.[0]?.currency ?? 'VND');
 
   return (
     <div className="space-y-8">

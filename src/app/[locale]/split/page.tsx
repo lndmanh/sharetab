@@ -30,8 +30,10 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getInitials } from '@/lib/avatar';
+import { parseUploadResponse, uploadError } from '@/lib/upload-response';
+import { createManualBill } from '@/lib/manual-bill';
 
-type Step = 'upload' | 'processing' | 'people' | 'assign';
+type Step = 'upload' | 'manual' | 'processing' | 'people' | 'assign';
 
 type GuestItem = {
   name: string;
@@ -59,6 +61,11 @@ export default function GuestSplitPage() {
   const [receiptId, setReceiptId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [manualName, setManualName] = useState('');
+  const [manualTotal, setManualTotal] = useState('');
+  const [manualTax, setManualTax] = useState('');
+  const [manualTip, setManualTip] = useState('');
+  const [manualError, setManualError] = useState('');
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
 
   // Data
@@ -152,12 +159,12 @@ export default function GuestSplitPage() {
         let message = t('upload.uploadFailed');
         try {
           const data = await res.json();
-          message = data.error ?? message;
+          message = uploadError(data, message);
         } catch {}
         throw new Error(message);
       }
 
-      const data = await res.json();
+      const data = parseUploadResponse(await res.json());
       setReceiptId(data.receiptId);
       setImagePath(data.imagePath);
       setStep('processing');
@@ -180,6 +187,23 @@ export default function GuestSplitPage() {
       setErrorMessage(err instanceof Error ? err.message : t('upload.uploadFailed'));
       setStep('upload');
     }
+  }
+
+  function handleManualBill(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const bill = createManualBill(manualName, manualTotal, manualTax, manualTip);
+    if (bill.error) {
+      setManualError(t(`manual.${bill.error}Error`));
+      return;
+    }
+    setManualError('');
+    setReceiptId(null);
+    setImagePath(null);
+    setItems(bill.items);
+    setExtracted(bill.receiptData);
+    setAssignments({});
+    setTipOverride('');
+    setStep('people');
   }
 
   function removePerson(idx: number) {
@@ -357,7 +381,7 @@ export default function GuestSplitPage() {
   // Calculate totals
   const parsedTip = parseFloat(tipOverride);
   const tip = tipOverride !== '' && isFinite(parsedTip) ? Math.round(parsedTip * 100) : (extracted?.tip ?? 0);
-  const currency = extracted?.currency ?? 'USD';
+  const currency = extracted?.currency ?? 'VND';
 
   const getPerPersonTotals = useCallback(() => {
     if (!extracted || items.length === 0) return [];
@@ -512,12 +536,93 @@ export default function GuestSplitPage() {
             />
           </label>
 
+          <Button
+            variant="outline"
+            className="w-full h-14 text-base"
+            onClick={() => setStep('manual')}
+            disabled={uploading}
+            data-testid="guest-manual-bill-btn"
+          >
+            <Pencil className="mr-2 h-5 w-5" />
+            {t('manual.open')}
+          </Button>
+
           {uploading && (
             <div className="flex items-center justify-center gap-2 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
               {t('upload.uploading')}
             </div>
           )}
+        </div>
+      )}
+
+      {step === 'manual' && (
+        <div className="mx-auto max-w-lg space-y-6 pt-8">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" aria-label={tc('actions.back')} onClick={() => setStep('upload')}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-2xl font-bold">{t('manual.title')}</h1>
+          </div>
+          <p className="text-sm text-muted-foreground">{t('manual.description')}</p>
+          <form onSubmit={handleManualBill} className="space-y-4" data-testid="guest-manual-bill-form">
+            <div className="space-y-2">
+              <Label htmlFor="manual-name">{t('manual.name')}</Label>
+              <Input
+                id="manual-name"
+                value={manualName}
+                onChange={(e) => setManualName(e.target.value)}
+                maxLength={100}
+                required
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manual-total">{t('manual.total')}</Label>
+              <Input
+                id="manual-total"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={manualTotal}
+                onChange={(e) => setManualTotal(e.target.value)}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="manual-tax">{t('manual.tax')}</Label>
+                <Input
+                  id="manual-tax"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={manualTax}
+                  onChange={(e) => setManualTax(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="manual-tip">{t('manual.tip')}</Label>
+                <Input
+                  id="manual-tip"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={manualTip}
+                  onChange={(e) => setManualTip(e.target.value)}
+                />
+              </div>
+            </div>
+            {manualError && (
+              <p role="alert" className="text-sm text-destructive">
+                {manualError}
+              </p>
+            )}
+            <Button type="submit" className="w-full h-12" data-testid="guest-manual-next-btn">
+              {t('manual.next')}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </form>
         </div>
       )}
 
@@ -544,7 +649,12 @@ export default function GuestSplitPage() {
       {step === 'people' && (
         <div className="space-y-6">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" aria-label={tc('actions.back')} onClick={() => setStep('upload')}>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={tc('actions.back')}
+              onClick={() => setStep(receiptId ? 'upload' : 'manual')}
+            >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <h2 className="text-xl font-bold" data-testid="guest-people-step">
@@ -627,12 +737,13 @@ export default function GuestSplitPage() {
                 {t('people.nextAssign')}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              {!showRescan ? (
+              {receiptId && !showRescan && (
                 <Button variant="outline" className="w-full" onClick={() => setShowRescan(true)}>
                   <RefreshCw className="mr-2 h-4 w-4" />
                   {t('people.rescanCorrections')}
                 </Button>
-              ) : (
+              )}
+              {receiptId && showRescan && (
                 <Card>
                   <CardContent className="space-y-3 pt-4">
                     <p className="text-sm text-muted-foreground">{t('people.rescanDescription')}</p>

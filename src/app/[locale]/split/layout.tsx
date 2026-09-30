@@ -1,10 +1,7 @@
 import { Link } from '@/i18n/navigation';
 import { Receipt } from 'lucide-react';
-import { auth } from '@/server/auth';
 
 export default async function SplitLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
       {/* Minimal header */}
@@ -14,15 +11,9 @@ export default async function SplitLayout({ children }: { children: React.ReactN
             <Receipt className="h-5 w-5 text-primary" />
             <span>ShareTab</span>
           </Link>
-          {session?.user ? (
-            <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Dashboard
-            </Link>
-          ) : (
-            <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Sign in
-            </Link>
-          )}
+          <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Dashboard
+          </Link>
         </div>
       </header>
 
