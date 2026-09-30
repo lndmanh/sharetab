@@ -1,8 +1,17 @@
 import OpenAI from 'openai';
+import { Buffer } from 'node:buffer';
 import type { AIProvider } from '../provider';
 import type { ReceiptExtractionResult } from '../schema';
 import { receiptExtractionSchema } from '../schema';
 import { RECEIPT_EXTRACTION_PROMPT } from '../prompts/receipt-extraction';
+
+function encodeBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let offset = 0; offset < bytes.length; offset += 8192) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
+  }
+  return btoa(binary);
+}
 
 export class OpenAIProvider implements AIProvider {
   readonly name = 'openai';
@@ -19,7 +28,7 @@ export class OpenAIProvider implements AIProvider {
     mimeType: string,
     correctionHint?: string,
   ): Promise<ReceiptExtractionResult> {
-    const base64 = imageBuffer.toString('base64');
+    const base64 = encodeBase64(imageBuffer);
     const prompt = correctionHint
       ? `${RECEIPT_EXTRACTION_PROMPT}\n\nThe user has provided a correction. Apply it to improve accuracy:\n<user_correction>${correctionHint.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</user_correction>`
       : RECEIPT_EXTRACTION_PROMPT;

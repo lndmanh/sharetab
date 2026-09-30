@@ -55,7 +55,7 @@ export class MockProvider implements AIProvider {
       tax,
       tip,
       total,
-      currency: 'USD',
+      currency: 'VND',
       confidence: 0.95,
     };
   }

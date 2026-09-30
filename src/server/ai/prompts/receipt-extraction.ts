@@ -11,7 +11,7 @@ Return a JSON object with exactly this structure:
   "tax": 104,
   "tip": 0,
   "total": 1403,
-  "currency": "USD"
+  "currency": "VND"
 }
 
 CRITICAL RULES:

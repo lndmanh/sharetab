@@ -27,8 +27,8 @@ export const receiptExtractionSchema = z.object({
   currency: z
     .string()
     .max(10)
-    .default('USD')
-    .transform((c) => (/^[a-zA-Z]{3}$/.test(c.trim()) ? c.trim().toUpperCase() : 'USD')),
+    .default('VND')
+    .transform(() => 'VND'),
   confidence: z.number().min(0).max(1).optional(),
 });
 

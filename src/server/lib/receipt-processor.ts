@@ -1,12 +1,13 @@
-import type { PrismaClient } from '@/generated/prisma/client';
-import type { Prisma } from '@/generated/prisma/client';
+import { randomUUID } from 'node:crypto';
 import type { AIProvider } from '../ai/provider';
 import { getAIProvidersWithFallback, clearProviderCache } from '../ai/registry';
 import { logger } from './logger';
 import { normalizeDate } from './normalize-date';
+import { env } from 'cloudflare:workers';
+import { Buffer } from 'node:buffer';
+import { requireD1Row, clearD1Guard } from './d1-atomic';
 
 interface ProcessReceiptImageOptions {
-  db: PrismaClient;
   receiptId: string;
   receipt: { imagePath: string; mimeType: string };
   correctionHint?: string;
@@ -15,20 +16,18 @@ interface ProcessReceiptImageOptions {
 
 /**
  * Shared receipt processing logic used by both authenticated and guest flows.
- * Reads the image file, calls the AI provider, creates receipt items in DB,
+ * Reads the private R2 image, calls the AI provider, creates receipt items in D1,
  * and updates the receipt record with the extraction result.
  */
 export async function processReceiptImage({
-  db,
   receiptId,
   receipt,
   correctionHint,
   logPrefix = 'receipt',
 }: ProcessReceiptImageOptions) {
-  const { readFile } = await import('fs/promises');
-  const { resolveUploadPath } = await import('./upload-dir');
-  const filepath = resolveUploadPath(receipt.imagePath);
-  const imageBuffer = await readFile(filepath);
+  const object = await env.RECEIPTS.get(receipt.imagePath);
+  if (!object) throw new Error(`Receipt image missing: ${receiptId}`);
+  const imageBuffer = Buffer.from(await object.arrayBuffer());
 
   logger.info(`${logPrefix}.processing`, {
     receiptId,
@@ -86,41 +85,31 @@ export async function processReceiptImage({
 
   const normalizedDate = normalizeDate(extraction.date);
 
-  // Replace items and finalize the receipt atomically — a crash or a
-  // concurrent reprocess must never leave a COMPLETED receipt with missing
-  // or duplicated items.
-  await db.$transaction(async (tx) => {
-    await tx.receiptItem.deleteMany({ where: { receiptId } });
-
-    await tx.receiptItem.createMany({
-      data: extraction.items.map((item, i) => ({
-        receiptId,
-        name: item.name,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        totalPrice: item.totalPrice,
-        sortOrder: i,
-      })),
-    });
-
-    await tx.receipt.update({
-      where: { id: receiptId },
-      data: {
-        status: 'COMPLETED',
-        aiProvider: usedProvider.name,
-        rawResponse: extraction as unknown as Prisma.InputJsonValue,
-        extractedData: {
-          merchantName: extraction.merchantName,
-          date: normalizedDate,
-          subtotal: extraction.subtotal,
-          tax: extraction.tax,
-          tip: extraction.tip,
-          total: extraction.total,
-          currency: extraction.currency,
-        } as unknown as Prisma.InputJsonValue,
-      },
-    });
-  });
+  const extractedData = {
+    merchantName: extraction.merchantName,
+    date: normalizedDate,
+    subtotal: extraction.subtotal,
+    tax: extraction.tax,
+    tip: extraction.tip,
+    total: extraction.total,
+    currency: extraction.currency,
+  };
+  const now = new Date().toISOString();
+  await env.DB.batch([
+    requireD1Row('SELECT 1 FROM Receipt WHERE id = ? AND status = ?', receiptId, 'PROCESSING'),
+    env.DB.prepare('DELETE FROM ReceiptItem WHERE receiptId = ?').bind(receiptId),
+    ...extraction.items.map((item, index) =>
+      env.DB.prepare(
+        `INSERT INTO ReceiptItem
+      (id, receiptId, name, quantity, unitPrice, totalPrice, sortOrder) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(randomUUID(), receiptId, item.name, item.quantity, item.unitPrice, item.totalPrice, index),
+    ),
+    env.DB.prepare(
+      `UPDATE Receipt SET status = 'COMPLETED', aiProvider = ?, rawResponse = ?, extractedData = ?,
+      updatedAt = ? WHERE id = ? AND status = 'PROCESSING'`,
+    ).bind(usedProvider.name, JSON.stringify(extraction), JSON.stringify(extractedData), now, receiptId),
+    clearD1Guard(),
+  ]);
 
   return {
     status: 'COMPLETED' as const,
