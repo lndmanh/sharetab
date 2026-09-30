@@ -1,18 +1,10 @@
+import { env } from 'cloudflare:workers';
+import { PrismaD1 } from '@prisma/adapter-d1';
 import { PrismaClient } from '@/generated/prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
-
-function createPrismaClient() {
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
-  return new PrismaClient({
-    adapter,
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  });
+/** Create a D1-backed Prisma client in the current Worker request context. */
+export function getDb() {
+  return new PrismaClient({ adapter: new PrismaD1(env.DB) });
 }
 
-export const db = globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db;
+export type AppDb = ReturnType<typeof getDb>;
