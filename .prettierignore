@@ -1,9 +1,9 @@
 node_modules
 .next
 src/generated
-package-lock.json
+worker-configuration.d.ts
+pnpm-lock.yaml
 messages/
 
-# CI/deploy infra — out of scope for this pass, left byte-for-byte as-is
+# Generated/infra files
 .github/workflows/
-docker/

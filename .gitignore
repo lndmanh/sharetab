@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env
+.dev.vars*
+!.dev.vars.example
 .env.local
 .env.production.local
 *.env.production
@@ -80,3 +82,6 @@ test-pg-data/
 
 # Claude Code session artifacts (agent worktrees, local settings)
 .claude/
+/dist/
+.vinext/
+.wrangler/

@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sharetab",
+  "workers_dev": false,
+  "preview_urls": false,
+  "compatibility_date": "2026-09-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "AI_PROVIDER_PRIORITY": "openai",
+    "LOG_LEVEL": "info",
+    "OPENAI_MODEL": "gpt-5.4-mini",
+    "OWNER_EMAIL": "myt@nnsvn.me",
+  },
+  "main": "vinext/server/fetch-handler",
+  "assets": {
+    "directory": "dist/client",
+    "not_found_handling": "none",
+    "binding": "ASSETS",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sharetab",
+      "database_id": "34e7dd71-d681-499d-9daa-65ee6ae7575a",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "r2_buckets": [{ "binding": "RECEIPTS", "bucket_name": "sharetab-receipts" }],
+  "observability": {
+    "enabled": true,
+    "traces": { "enabled": true, "head_sampling_rate": 0.01 },
+  },
+}
