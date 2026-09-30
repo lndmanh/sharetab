@@ -10,11 +10,11 @@ describe('parseExtractedData', () => {
       tax: 80,
       tip: 200,
       total: 1280,
-      currency: 'USD',
+      currency: 'VND',
     });
     expect(result.subtotal).toBe(1000);
     expect(result.tax).toBe(80);
-    expect(result.currency).toBe('USD');
+    expect(result.currency).toBe('VND');
   });
 
   it('defaults missing numeric fields to 0', () => {
@@ -23,7 +23,7 @@ describe('parseExtractedData', () => {
     expect(result.tax).toBe(0);
     expect(result.tip).toBe(0);
     expect(result.total).toBe(0);
-    expect(result.currency).toBe('USD');
+    expect(result.currency).toBe('VND');
   });
 
   it('handles null input', () => {

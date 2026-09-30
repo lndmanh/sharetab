@@ -2,25 +2,26 @@ import { describe, test, expect } from 'vitest';
 import { formatCents, parseToCents, centsToDecimal } from './money';
 
 describe('formatCents', () => {
-  test('formats whole dollar amounts', () => {
-    expect(formatCents(1000)).toBe('$10.00');
-    expect(formatCents(100)).toBe('$1.00');
-    expect(formatCents(0)).toBe('$0.00');
+  test('defaults to VND with no fractional dong', () => {
+    expect(formatCents(1000)).toBe('₫10');
+    expect(formatCents(100)).toBe('₫1');
+    expect(formatCents(0)).toBe('₫0');
+    expect(formatCents(1299)).toBe('₫13');
   });
 
   test('formats cents correctly', () => {
-    expect(formatCents(1299)).toBe('$12.99');
-    expect(formatCents(1)).toBe('$0.01');
-    expect(formatCents(50)).toBe('$0.50');
+    expect(formatCents(1299, 'USD')).toBe('$12.99');
+    expect(formatCents(1, 'USD')).toBe('$0.01');
+    expect(formatCents(50, 'USD')).toBe('$0.50');
   });
 
   test('formats large amounts', () => {
-    expect(formatCents(10000000)).toBe('$100,000.00');
-    expect(formatCents(999999)).toBe('$9,999.99');
+    expect(formatCents(10000000, 'USD')).toBe('$100,000.00');
+    expect(formatCents(999999, 'USD')).toBe('$9,999.99');
   });
 
   test('formats negative amounts', () => {
-    expect(formatCents(-1299)).toBe('-$12.99');
+    expect(formatCents(-1299, 'USD')).toBe('-$12.99');
   });
 
   test('respects currency parameter', () => {
@@ -39,47 +40,13 @@ describe('formatCents', () => {
   });
 
   test('defaults to configured app locale when not specified', () => {
-    expect(formatCents(1299, 'USD')).toBe('$12.99');
+    expect(formatCents(100000)).toBe('₫1,000');
     expect(formatCents(1299, 'USD', 'en-US')).toBe('$12.99');
   });
 
-  test('maps app locale codes to regional money locales', () => {
-    const result = formatCents(123456, 'EUR', 'es');
-    expect(result).toContain('1234,56');
-  });
-
-  test('maps all supported app locales to regional money locales', () => {
-    // Normalize whitespace variants (NBSP, narrow NBSP) to ASCII space
-    // to avoid flaky assertions across Node/ICU versions
+  test('maps Vietnamese locale to vi-VN grouping', () => {
     const norm = (s: string) => s.replace(/[  ]/g, ' ');
-
-    // Swedish
-    const sv = formatCents(123456, 'SEK', 'sv');
-    expect(norm(sv)).toContain('1 234,56');
-
-    // French
-    const fr = formatCents(123456, 'EUR', 'fr');
-    expect(norm(fr)).toContain('1 234,56');
-
-    // German
-    const de = formatCents(123456, 'EUR', 'de');
-    expect(de).toContain('1.234,56');
-
-    // Portuguese (Brazil)
-    const ptBR = formatCents(123456, 'BRL', 'pt-BR');
-    expect(ptBR).toContain('1.234,56');
-
-    // Japanese
-    const ja = formatCents(100000, 'JPY', 'ja');
-    expect(ja).toContain('1,000');
-
-    // Chinese (Simplified)
-    const zhCN = formatCents(123456, 'CNY', 'zh-CN');
-    expect(zhCN).toContain('1,234.56');
-
-    // Korean
-    const ko = formatCents(123456, 'KRW', 'ko');
-    expect(ko).toContain('1,235');
+    expect(norm(formatCents(10000000, 'VND', 'vi'))).toBe('100.000 ₫');
   });
 });
 
