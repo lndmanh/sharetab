@@ -1,373 +1,56 @@
-<p align="center">
-  <img src="public/icons/icon.svg" width="80" alt="ShareTab logo" />
-</p>
+# ShareTab — private Cloudflare Worker
 
-<h1 align="center">ShareTab</h1>
+ShareTab tracks shared expenses, balances, settlements, and receipt splits. This branch is a single-operator app for Cloudflare Workers. It has no in-app sign-in, registration, or request rate limits. **Cloudflare Access must protect the entire Worker before any public route is enabled.** Anyone admitted by its Access policy can read and change all app data.
 
-<p align="center">
-  A self-hosted, open-source alternative to Splitwise with AI-powered receipt scanning.
-</p>
+The app uses vinext (Next.js 16 API on Workers), Prisma with Cloudflare D1, a private R2 bucket for receipt images, and the OpenAI API for optional receipt scanning. Other people in a group are participant records, not login accounts. Guest/claim links remain usable only by someone admitted through the same Access policy; they are not public sharing links.
 
-<p align="center">
-  <a href="#quick-start">Quick Start</a> &bull;
-  <a href="#features">Features</a> &bull;
-  <a href="#screenshots">Screenshots</a> &bull;
-  <a href="#configuration">Configuration</a> &bull;
-  <a href="#development">Development</a>
-</p>
+## Local development
 
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT" /></a>
-  <img src="https://img.shields.io/github/stars/sw-carlos-cristobal/sharetab" alt="GitHub stars" />
-  <img src="https://img.shields.io/github/last-commit/sw-carlos-cristobal/sharetab" alt="Last commit" />
-</p>
-
----
-
-ShareTab is a free, self-hosted alternative to Splitwise for tracking shared expenses with roommates, friends, and travel groups. Snap a photo of a receipt, let AI extract the line items, and assign them to group members. Taxes and tips split proportionally. Deploy on your own server with Docker Compose.
-
-## Screenshots
-
-### Dashboard -- see all your balances at a glance
-
-<p align="center">
-  <img src="demo/dashboard.gif" width="100%" alt="Dashboard showing balance summary, who owes you, and group cards" />
-</p>
-
-### AI receipt scanning -- snap a photo, assign items to people
-
-<p align="center">
-  <img src="demo/receipt-scan.gif" width="320" alt="Receipt scan: upload photo, AI extracts items, assign to group members" />
-</p>
-
-### Split modes -- equal, exact, percentage, or shares
-
-<p align="center">
-  <img src="demo/split-modes.gif" width="320" alt="Switching between equal, exact, percentage, and shares split modes" />
-</p>
-
-### Add expense -- quick and simple
-
-<p align="center">
-  <img src="demo/add-expense.gif" width="320" alt="Adding an expense with equal split" />
-</p>
-
-### Multi-currency -- spend in any currency, settle in the group's currency
-
-<p align="center">
-  <img src="demo/multi-currency.gif" width="320" alt="Adding an expense in EUR for a USD group, with automatic exchange-rate conversion" />
-</p>
-
-### Create a group -- emoji, currency, and description
-
-<p align="center">
-  <img src="demo/create-group.gif" width="320" alt="Creating a new group with emoji picker and currency selector" />
-</p>
-
-### Settle up -- click a debt to record payment
-
-<p align="center">
-  <img src="demo/settle-up.gif" width="320" alt="Settlement dialog with From, To, and Amount" />
-</p>
-
-### Venmo payments -- one tap to pay your share
-
-<p align="center">
-  <img src="demo/venmo-pay.gif" width="320" alt="Guest split with one-tap Venmo deep-link pay buttons for each person" />
-</p>
-
-### Invite members -- share a link
-
-<p align="center">
-  <img src="demo/invite-members.gif" width="320" alt="Generating and copying an invite link" />
-</p>
-
-### Guest bill splitting -- no account needed
-
-<p align="center">
-  <img src="demo/guest-split.gif" width="320" alt="Guest split: upload receipt, add people, assign items, share results" />
-</p>
-
-### Group settings
-
-<p align="center">
-  <img src="demo/group-settings.gif" width="320" alt="Group settings page with member management" />
-</p>
-
-### Dark mode -- toggle with one click
-
-<p align="center">
-  <img src="demo/dark-mode.gif" width="320" alt="Dark mode toggle" />
-</p>
-
-### 9 languages -- switch the entire UI in one click
-
-<p align="center">
-  <img src="demo/language-switcher.gif" width="100%" alt="Switching the interface language between English, Spanish, and Japanese with locale-aware formatting" />
-</p>
-
-### Admin dashboard -- manage users, AI providers, and system settings
-
-<p align="center">
-  <img src="demo/admin-dashboard.gif" width="100%" alt="Admin dashboard with system health, OAuth management, audit log, and tools" />
-</p>
-
-## Features
-
-- **Group expense tracking** with multiple split modes (equal, percentage, shares, exact, item-level)
-- **AI receipt scanning** -- photograph a receipt, AI extracts line items, assign items to group members with proportional tax/tip; zoomable/pannable receipt viewer; rescan with correction prompts
-- **Guest bill splitting** -- no account needed, shareable summary links
-- **AI receipt scanning** -- OpenAI (API key, GPT-4o by default)
-- **Group archiving** -- archive inactive groups to declutter your dashboard; toggle archived view on groups page
-- **Cross-group dashboard** -- see all your balances at a glance, with per-person debt breakdown
-- **Debt simplification** -- minimize the number of payments needed
-- **Settle up** -- record payments between any two group members with explicit From/To fields
-- **Placeholder members** -- add people without accounts; rename or remove them from group settings
-- **Dark mode** -- system-aware with manual toggle
-- **Invite links** -- share a link to add friends to your groups
-- **Magic link auth** -- passwordless email sign-in
-- **PWA** -- installable on mobile with app-like experience
-- **Admin dashboard** -- user management, group overview, storage stats, AI usage, audit log, registration control, announcements, server logs, user impersonation, data export, expired guest split cleanup
-- **Self-hosted** -- Docker Compose deployment, designed for Unraid
-
-## Quick Start
-
-ShareTab ships as an all-in-one Docker container with PostgreSQL bundled inside. No external database needed.
+Requires Node.js 22+ and pnpm 12 (`packageManager` in `package.json`; Corepack or a global `pnpm` install). From the repository root:
 
 ```bash
-cd docker
-cp ../.env.example .env
+pnpm install --frozen-lockfile
+pnpm exec prisma generate
+pnpm run db:migrate:local
+cp .env.example .dev.vars
+pnpm run dev
 ```
 
-Edit `.env` with your settings -- at minimum, generate real values for `NEXTAUTH_SECRET` and `AUTH_SECRET`:
+Set `OPENAI_API_KEY` in `.dev.vars` to scan real receipts. For local fixture extraction only, set `AI_PROVIDER_PRIORITY=mock`. `pnpm run dev` builds and runs the Worker locally with D1/R2 simulations. Local state lives under `.wrangler/state` and is not committed. This production-shaped local path has no hot reload: stop it, run `pnpm run build`, then `pnpm run start` after source edits. The direct `vinext dev` path currently fails Prisma/D1 calls in Vite's development runtime, so it is not the default.
+
+The app creates its one operator row on the first request. `OWNER_EMAIL` in `wrangler.jsonc` is display/record identity, not an authentication check; set it before first use and keep it stable. The profile name can be edited in Settings. New groups add that operator as owner; add people to split with under group Settings.
+
+## Cloudflare setup and deployment
+
+1. Create a D1 database named `sharetab` (`pnpm exec wrangler d1 create sharetab`). Replace the all-zero `database_id` in `wrangler.jsonc` with the returned ID. Create a private R2 bucket named `sharetab-receipts` (`pnpm exec wrangler r2 bucket create sharetab-receipts`). Do not attach a public bucket hostname.
+2. Run `pnpm exec wrangler d1 migrations apply sharetab --remote` against that **new, empty** D1 database. The checked-in migrations are the schema and a write guard for atomic D1 batches; PostgreSQL data is not imported.
+3. Build and deploy with `pnpm run build` and `pnpm run deploy:vinext`. The checked-in config has `workers_dev: false`, `preview_urls: false`, and no route, so this first deployment is not a public app URL. Do not add a route until Access is configured.
+4. In Workers & Pages → this Worker → Access, choose **All traffic** and an Allow policy for your exact identity (not an entire email domain). This Worker-level rule covers custom domains, routes, `workers.dev`, and previews if any are later enabled. Add `OPENAI_API_KEY` as a Worker secret if scanning is needed (`pnpm exec wrangler secret put OPENAI_API_KEY`); set `OPENAI_MODEL` as a non-secret variable if desired.
+5. Add a custom domain/route to the Worker. From a signed-out browser, verify the root page, `/api/trpc/profile.getOperator`, `/api/upload`, `/api/uploads/...`, and `/api/admin/export` are blocked by Access; then sign in and test the app. No API or media route may bypass the Worker-level policy.
+
+The [Cloudflare Access Worker guide](https://developers.cloudflare.com/workers/configuration/cloudflare-access/) describes the All traffic policy. If you use only a hostname policy instead, you must separately protect every alternative route and preview. The Access logout link in the app points to `/cdn-cgi/access/logout`.
+
+`wrangler.jsonc` contains placeholder D1 metadata, not a real Cloudflare resource. This repository does not create resources, set Access policy, apply remote migrations, or deploy automatically. Keep secrets in `.dev.vars` locally and in Worker secrets remotely; do not commit them.
+
+## Data and operational notes
+
+- D1 holds expenses, shares, participants, receipts metadata, and quick-split sessions. Monetary amounts are integer cents. Financial multi-row writes use atomic D1 batches; quick-split edits use a revision check. Never substitute Prisma's D1 `$transaction` for these operations: its adapter does not provide the expected transaction guarantee.
+- Receipt images are private R2 objects, served only through `/api/uploads/...` after a matching D1 receipt lookup. Uploads retain a 10 MiB cap and MIME/magic-byte checks. Access protects both the API and media path.
+- `/api/admin/export` exports database metadata only; back up the R2 bucket separately. D1 has managed backup/time-travel features, but test restores before relying on them.
+- No application login, password, invitations, SMTP, or per-app rate limits remain. Input validation, same-origin write checks, and database constraints remain because they protect data correctness even for a private app.
+- The previous Docker/PostgreSQL and account-based Playwright scenarios are not applicable to this branch. The unit suite and a local Worker smoke pass cover the new runtime; browser flows should be re-tested before production use.
+
+## Checks
 
 ```bash
-# Generate a secret
-openssl rand -base64 32
+pnpm exec prisma validate
+pnpm exec prisma generate
+pnpm exec tsc --noEmit
+pnpm test
+pnpm run build
+pnpm run start # in a second terminal, after pnpm run db:migrate:local
+pnpm run test:worker # local only; creates and cleans up test records
+pnpm exec wrangler deploy --dry-run --config dist/server/wrangler.json
 ```
 
-Then start the container:
-
-```bash
-docker compose up -d
-```
-
-The app will be available at `http://localhost:3000`.
-
-## Unraid
-
-If you want to run ShareTab on Unraid, this repo includes a ready-made template at [unraid/sharetab.xml](unraid/sharetab.xml).
-
-To use it:
-
-```bash
-# On your Unraid server
-mkdir -p /boot/config/plugins/dockerMan/templates-user
-cp /path/to/sharetab/unraid/sharetab.xml /boot/config/plugins/dockerMan/templates-user/sharetab.xml
-```
-
-Then in the Unraid web UI:
-
-1. Open `Docker`.
-2. Click `Add Container`.
-3. Select the `ShareTab` template from the template dropdown.
-4. Fill in the required variables like `AUTH_SECRET`, `NEXTAUTH_SECRET`, and any optional AI settings.
-5. Click `Apply` to create and start the container.
-
-You can also skip the manual copy and paste the raw template URL into Unraid's template install flow:
-
-`https://raw.githubusercontent.com/sw-carlos-cristobal/sharetab/main/unraid/sharetab.xml`
-
-**Backups:**
-
-```bash
-docker compose exec sharetab su-exec postgres pg_dump -U sharetab sharetab > backup.sql
-```
-
-## Upgrading
-
-When upgrading to a new ShareTab version, pull the latest image and recreate the container:
-
-```bash
-cd docker
-docker compose pull
-docker compose up -d
-```
-
-The entrypoint automatically runs any SQL migration files in `prisma/migrations/` before applying the Prisma schema. Most upgrades are fully automatic.
-
-### Manual migration (v0.7.x → v0.8.0)
-
-Version 0.8.0 added an `updatedAt` column and converted the `status` column from text to an enum on the `GuestSplit` table. This migration now runs automatically on container startup. If you need to run it manually:
-
-```bash
-docker compose exec sharetab su-exec postgres psql -U sharetab -d sharetab \
-  -f /app/prisma/migrations/guest_split_status_enum.sql
-```
-
-This is idempotent — safe to run more than once.
-
-## Configuration
-
-All configuration is done through environment variables. Copy `.env.example` to `.env` and adjust as needed.
-
-### Required
-
-| Variable          | Description                                                      |
-| ----------------- | ---------------------------------------------------------------- |
-| `NEXTAUTH_SECRET` | Session encryption key. Generate with `openssl rand -base64 32`. |
-| `AUTH_SECRET`     | Auth.js secret. Generate the same way.                           |
-
-### AI Receipt Scanning
-
-Receipt scanning uses the OpenAI API. Set `OPENAI_API_KEY` and optionally `OPENAI_MODEL` (default `gpt-4o`).
-
-| Variable               | Description                                                          |
-| ---------------------- | -------------------------------------------------------------------- |
-| `OPENAI_API_KEY`       | OpenAI API key. Required for receipt scanning.                       |
-| `OPENAI_MODEL`         | OpenAI model for receipt scanning. Defaults to `gpt-4o`.             |
-| `AI_PROVIDER_PRIORITY` | `openai` (default). `mock` is for tests and returns fixture data.    |
-
-### OAuth (optional)
-
-| Variable               | Description                                       |
-| ---------------------- | ------------------------------------------------- |
-| `GOOGLE_CLIENT_ID`     | Google OAuth client ID for "Sign in with Google". |
-| `GOOGLE_CLIENT_SECRET` | Corresponding client secret.                      |
-
-### Magic Link Auth (optional)
-
-| Variable                | Description                                                                                                             |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `EMAIL_SERVER_HOST`     | SMTP host (e.g. `smtp.gmail.com`). Used for magic link sign-in. |
-| `EMAIL_SERVER_PORT`     | SMTP port. Use `465` for implicit TLS, `587` for STARTTLS.                                                              |
-| `EMAIL_SERVER_USER`     | SMTP username / email address.                                                                                          |
-| `EMAIL_SERVER_PASSWORD` | SMTP password or app password.                                                                                          |
-| `EMAIL_FROM`            | From address for sent emails.                                                                                           |
-
-### Admin
-
-| Variable      | Description                                                                                                                                                                            |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ADMIN_EMAIL` | Email of the admin user. Grants access to `/admin` dashboard for managing users, groups, storage, and system settings. |
-
-### Other
-
-| Variable                  | Default                 | Description                                                              |
-| ------------------------- | ----------------------- | ------------------------------------------------------------------------ |
-| `NEXTAUTH_URL`            | `http://localhost:3000` | Public URL of your instance.                                             |
-| `AUTH_TRUST_HOST`         | `false`                 | Set to `true` when running on a local network or behind a reverse proxy. |
-| `DB_USER`                 | `sharetab`              | PostgreSQL username (Docker bundled DB).                                 |
-| `DB_PASSWORD`             | `sharetab`              | PostgreSQL password (Docker bundled DB).                                 |
-| `DB_NAME`                 | `sharetab`              | PostgreSQL database name (Docker bundled DB).                            |
-| `UPLOAD_DIR`              | `./uploads`             | Directory for receipt image uploads.                                     |
-| `MAX_UPLOAD_SIZE_MB`      | `10`                    | Maximum upload file size.                                                |
-| `AUTH_RATE_LIMIT_MAX`     | `5`                     | Max login attempts per IP per hour.                                      |
-| `REGISTER_RATE_LIMIT_MAX` | `10`                    | Max registration attempts per IP per hour.                               |
-| `GUEST_RATE_LIMIT_MAX`    | `10`                    | Max guest split creations per IP per hour.                               |
-| `LOG_LEVEL`               | `info`                  | Logging verbosity: `debug`, `info`, `warn`, or `error`.                  |
-
-## Tech Stack
-
-| Layer     | Technology                                                                                                                                |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Framework | [Next.js 16](https://nextjs.org) (App Router) + TypeScript                                                                                |
-| API       | [tRPC v11](https://trpc.io) (end-to-end type-safe)                                                                                        |
-| Database  | [Prisma 7](https://www.prisma.io) + PostgreSQL 16                                                                                         |
-| Auth      | [NextAuth v5](https://authjs.dev) (credentials + OAuth + magic link)                                                                      |
-| UI        | [TailwindCSS 4](https://tailwindcss.com) + [shadcn/ui](https://ui.shadcn.com) + [next-themes](https://github.com/pacocoursey/next-themes) |
-| AI        | OpenAI API (receipt scanning)                                                                                                             |
-| Testing   | [Vitest](https://vitest.dev) (unit) + [Playwright](https://playwright.dev) (e2e)                                                          |
-
-## Development
-
-### Automation Commands
-
-These commands are intended to be explicit enough for a human or an LLM to use without inferring repo-specific workflow details.
-
-```bash
-# Bump version files on main and update CHANGELOG.md
-npm run version:bump -- patch
-
-# Create a release branch + PR from main
-npm run release:create -- patch
-
-# Create a PR from the current branch
-npm run pr:create -- --title "feat: example change"
-
-# Push the current HEAD to origin/main
-npm run push:main
-
-# Publish a merged release by pushing the version tag
-npm run release:publish -- v1.2.3
-```
-
-Intent mapping:
-
-- "bump the version" -> `npm run version:bump -- <patch|minor|major>`
-- "create a release" -> `npm run release:create -- <patch|minor|major>`
-- "create a PR" -> `npm run pr:create -- [--base main] [--title \"...\"]`
-- "push to main" -> `npm run push:main`
-- "publish the release" -> `npm run release:publish -- [vX.Y.Z]`
-
-Release flow:
-
-1. Run `npm run release:create -- patch` from `main`.
-2. Merge the generated `release/vX.Y.Z` PR.
-3. Run `npm run release:publish -- vX.Y.Z` from `main`.
-
-`release:publish` only creates and pushes the git tag. The actual GitHub release page and semver Docker images are still published by [publish-release.yml](./.github/workflows/publish-release.yml).
-
-```bash
-# Install dependencies
-npm install
-
-# Generate Prisma client
-npx prisma generate
-
-# Copy and configure environment
-cp .env.example .env  # Then edit .env as needed
-
-# Option A: All-in-one (embedded PostgreSQL + schema push + seed + dev server)
-npm run dev:full
-
-# Option B: Manual setup (bring your own PostgreSQL)
-# Set DATABASE_URL in .env pointing to your PostgreSQL instance
-npx prisma db push
-npm run db:seed    # optional -- creates demo data
-npm run dev
-```
-
-Demo accounts after seeding: `alice@example.com`, `bob@example.com`, `charlie@example.com` (password: `password123`).
-
-### Running Tests
-
-```bash
-# Unit tests (Vitest)
-npm test
-
-# E2E tests (requires dev server running)
-BASE_URL=http://localhost:3000 npx playwright test
-
-# E2E with visible browser
-BASE_URL=http://localhost:3000 npx playwright test --headed
-
-# Include AI-dependent tests (requires configured AI provider)
-BASE_URL=http://localhost:3000 RUN_AI_TESTS=1 npx playwright test
-```
-
-Set `AUTH_RATE_LIMIT_MAX=9999` and `GUEST_RATE_LIMIT_MAX=9999` in `.env` to avoid rate limiting during repeated test runs.
-
-## Contributing
-
-Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, PR guidelines, and code style.
-
-If you find a bug or have a feature request, please [open an issue](../../issues).
-
-## Security
-
-To report a vulnerability, see [SECURITY.md](SECURITY.md).
-
-## License
-
-MIT
+The project is based on the original open-source [ShareTab](https://github.com/sw-carlos-cristobal/sharetab) (MIT license). See [LICENSE](LICENSE) and [CHANGELOG.md](CHANGELOG.md) for upstream history.

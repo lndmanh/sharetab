@@ -1,130 +1,34 @@
-# Contributing to ShareTab
+# Contributing to the private Workers branch
 
-Thanks for your interest in contributing! Here's everything you need to get started.
+This branch targets a single-operator Cloudflare Worker. See [README.md](README.md) for setup and Access deployment order. It does not use PostgreSQL, Docker, or in-app accounts.
 
-## Dev Environment Setup
-
-### Prerequisites
-
-- Node.js 20+
-- npm 10+
-- Git
-
-### Install dependencies
+## Local setup
 
 ```bash
-git clone https://github.com/sw-carlos-cristobal/sharetab.git
-cd sharetab
-npm install
-npx prisma generate
+pnpm install --frozen-lockfile
+pnpm exec prisma generate
+pnpm run db:migrate:local
+cp .env.example .dev.vars
+pnpm run dev
 ```
 
-### Start the dev server
+`pnpm run dev` builds and runs the Worker on local D1/R2. Rebuild after source edits; the direct Vite hot-reload path currently fails Prisma/D1 calls. Do not commit `.dev.vars`.
 
-The easiest way is the all-in-one script — it starts an embedded PostgreSQL instance and the Next.js dev server together:
+## Validation
 
 ```bash
-npm run dev:full
+pnpm run format:check
+pnpm run lint
+pnpm exec tsc --noEmit
+pnpm test
+pnpm run build
+pnpm run start # in another terminal
+pnpm run test:worker
+pnpm exec wrangler deploy --dry-run --config dist/server/wrangler.json
 ```
 
-Or if you have your own PostgreSQL running, copy `.env.example` to `.env`, set `DATABASE_URL`, then:
+The Worker smoke test mutates only localhost D1/R2 and cleans its fixtures. The original account-based Playwright suite is historical and not used by this branch's CI. Add new browser coverage for changed flows before enabling a production route.
 
-```bash
-npm run dev
-```
+For schema changes, update `prisma/schema.prisma` and add a numbered SQL migration under `migrations/`; apply locally with `pnpm run db:migrate:local`. Never use `prisma db push` on D1. Prisma's D1 adapter does not provide application transaction semantics: financial multi-row writes must use prepared D1 batches and be tested against the Workers runtime. Preserve integer-cent money amounts and member references.
 
-### Seed demo data
-
-```bash
-npm run db:seed
-```
-
-This creates three demo users you can log in with:
-
-| Email               | Password    |
-| ------------------- | ----------- |
-| alice@example.com   | password123 |
-| bob@example.com     | password123 |
-| charlie@example.com | password123 |
-
-## Running Tests
-
-### Unit tests
-
-```bash
-npm test
-```
-
-Runs ~278 fast Vitest tests (under 1 second). These cover money utilities, split calculations, balance computation, AI providers, admin routes, and more.
-
-### E2E tests
-
-```bash
-npm run dev:full   # in one terminal
-BASE_URL=http://localhost:3000 npx playwright test   # in another
-```
-
-Tip: set `AUTH_RATE_LIMIT_MAX=9999` and `GUEST_RATE_LIMIT_MAX=9999` in `.env` to avoid rate limiting during test runs.
-
-### Linting
-
-```bash
-npm run lint
-```
-
-### Formatting
-
-```bash
-npm run format         # auto-fix formatting
-npm run format:check   # check only (what CI runs)
-```
-
-### Type checking
-
-```bash
-npx tsc --noEmit
-```
-
-## Making Changes
-
-### Prisma schema changes
-
-After editing `prisma/schema.prisma`:
-
-```bash
-npx prisma db push      # apply to dev DB
-npx prisma generate     # regenerate the client
-```
-
-**Breaking schema changes** (enum conversions, column type changes, data migrations) can't be handled by `prisma db push` alone. For these, add an idempotent `.sql` file in `prisma/migrations/`. The Docker entrypoint runs all `*.sql` files in that directory before `prisma db push`, so they execute automatically on container startup. Name the file descriptively (e.g., `guest_split_status_enum.sql`) and make it safe to re-run.
-
-### Adding a tRPC route
-
-Routers live in `src/server/trpc/routers/`. Add your procedure there and wire it into `src/server/trpc/router.ts`.
-
-## Pull Request Guidelines
-
-- **One concern per PR** — bug fixes, features, and refactors should be separate PRs.
-- **Describe what and why** — the PR description should explain the motivation, not just restate the diff.
-- **Add tests** — new logic should have unit tests where possible; new user flows should have e2e coverage.
-- **Pass CI** — make sure `npm run format:check`, `npm run lint`, `npx tsc --noEmit`, `npm test`, and `npm run build` all pass before opening a PR.
-- **Conventional commits** — use prefixes like `feat:`, `fix:`, `chore:`, `docs:`, `refactor:` in commit messages.
-
-## Project Structure
-
-```
-src/
-  app/           # Next.js App Router pages
-  components/    # React components (organized by domain)
-  server/        # tRPC routers, Prisma client, auth, AI providers
-  lib/           # Shared utilities (money, splits, etc.)
-prisma/
-  schema.prisma  # Database schema
-docker/          # Dockerfile + docker-compose
-```
-
-See [CLAUDE.md](CLAUDE.md) for a full architecture reference.
-
-## Questions?
-
-Open a [GitHub Discussion](https://github.com/sw-carlos-cristobal/sharetab/discussions) or file an issue.
+Do not commit secrets or deploy a Worker route without Worker-level Cloudflare Access set to All traffic. The private R2 receipt bucket must not get a public hostname. Pull requests should explain the change, include focused tests, and pass the checks above.
