@@ -11,7 +11,7 @@ test.describe('Guest Claiming Session UI', () => {
 
   test('full claiming flow: create session, share link, join, claim items, save', async ({ page, browser }) => {
     // === Step 1: Creator uploads receipt and creates claiming session ===
-    await page.goto('/en/split');
+    await page.goto('/split');
     await expect(page.getByText('Split a bill')).toBeVisible();
 
     const [fileChooser] = await Promise.all([

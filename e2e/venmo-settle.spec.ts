@@ -37,7 +37,7 @@ test.describe('Venmo settle from group balances', () => {
         groupId,
         title: 'Lunch',
         amount: 2000,
-        currency: 'USD',
+        currency: 'VND',
         paidById: aliceId,
         splitMode: 'EQUAL',
         shares: [
@@ -48,7 +48,7 @@ test.describe('Venmo settle from group balances', () => {
 
       // Login as Bob (who owes Alice)
       await login(page, users.bob.email, users.bob.password);
-      await page.goto(`/en/groups/${groupId}`);
+      await page.goto(`/groups/${groupId}`);
 
       // Wait for the debt to show
       await expect(page.getByTestId('balances-title')).toBeVisible({ timeout: 15000 });
@@ -85,7 +85,7 @@ test.describe('Venmo settle from group balances', () => {
         groupId,
         title: 'Dinner',
         amount: 3000,
-        currency: 'USD',
+        currency: 'VND',
         paidById: aliceId,
         splitMode: 'EQUAL',
         shares: [
@@ -95,7 +95,7 @@ test.describe('Venmo settle from group balances', () => {
       });
 
       await login(page, users.bob.email, users.bob.password);
-      await page.goto(`/en/groups/${groupId}`);
+      await page.goto(`/groups/${groupId}`);
 
       await expect(page.getByTestId('balances-title')).toBeVisible({ timeout: 15000 });
 

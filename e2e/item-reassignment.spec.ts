@@ -18,7 +18,7 @@ test.describe('Item reassignment via person switcher', () => {
         tax: 300,
         tip: 0,
         total: 3300,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Burger', quantity: 1, unitPrice: 1200, totalPrice: 1200 },
@@ -47,7 +47,7 @@ test.describe('Item reassignment via person switcher', () => {
     // Alice opens in browser
     const browserCtx = await browser.newContext({ viewport: { width: 430, height: 932 } });
     const page = await browserCtx.newPage();
-    await page.goto(`/en/split/${shareToken}/claim`);
+    await page.goto(`/split/${shareToken}/claim`);
 
     // Join as Alice
     await expect(page.getByTestId('claim-join-form')).toBeVisible({ timeout: 15000 });

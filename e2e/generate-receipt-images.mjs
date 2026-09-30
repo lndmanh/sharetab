@@ -1,6 +1,6 @@
 /**
  * Generate realistic receipt images from HTML templates using Playwright.
- * Run: npx playwright test e2e/generate-receipt-images.mjs (or just `node e2e/generate-receipt-images.mjs`)
+ * Run: pnpm exec playwright test e2e/generate-receipt-images.mjs (or just `node e2e/generate-receipt-images.mjs`)
  *
  * Outputs PNG files to e2e/receipts/
  */

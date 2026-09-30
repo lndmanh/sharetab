@@ -13,7 +13,7 @@ async function createSessionWithToken() {
       tax: 100,
       tip: 0,
       total: 1100,
-      currency: 'USD',
+      currency: 'VND',
     },
     items: [{ name: 'Item', quantity: 1, unitPrice: 1000, totalPrice: 1000 }],
     creatorName: 'Alice',

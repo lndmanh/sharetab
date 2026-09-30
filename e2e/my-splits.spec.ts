@@ -4,7 +4,7 @@ import { login, users, authedContext, trpcMutation } from './helpers';
 test.describe('My Splits page', () => {
   test('shows empty state when user has no splits', async ({ page }) => {
     await login(page, users.charlie.email, users.charlie.password);
-    await page.goto('/en/splits');
+    await page.goto('/splits');
 
     await expect(page.getByTestId('splits-page')).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId('splits-empty')).toBeVisible({ timeout: 10000 });
@@ -21,7 +21,7 @@ test.describe('My Splits page', () => {
         tax: 300,
         tip: 400,
         total: 3700,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Pasta', quantity: 1, unitPrice: 1500, totalPrice: 1500 },
@@ -40,7 +40,7 @@ test.describe('My Splits page', () => {
 
     // Navigate to My Splits page as Alice
     await login(page, users.alice.email, users.alice.password);
-    await page.goto('/en/splits');
+    await page.goto('/splits');
 
     await expect(page.getByTestId('splits-page')).toBeVisible({ timeout: 10000 });
     // Should show at least one split card with merchant name, total, and people count
@@ -51,7 +51,7 @@ test.describe('My Splits page', () => {
 
   test('split card links to the split result page', async ({ page }) => {
     await login(page, users.alice.email, users.alice.password);
-    await page.goto('/en/splits');
+    await page.goto('/splits');
 
     await expect(page.getByTestId('splits-page')).toBeVisible({ timeout: 10000 });
 
@@ -68,7 +68,7 @@ test.describe('My Splits page', () => {
     await login(page, users.alice.email, users.alice.password);
     // On desktop, sidebar should show My Splits
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto('/en/dashboard');
+    await page.goto('/dashboard');
 
     const mySplitsLink = page.locator('a[href*="/splits"]');
     await expect(mySplitsLink.first()).toBeVisible({ timeout: 10000 });

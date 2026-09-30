@@ -15,7 +15,7 @@ test.describe('Finding #3: removePerson index state', () => {
         tax: 300,
         tip: 0,
         total: 3300,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Item A', quantity: 1, unitPrice: 1000, totalPrice: 1000 },
@@ -44,7 +44,7 @@ test.describe('Finding #3: removePerson index state', () => {
     // Open in browser, join as Alice via UI
     const browserCtx = await browser.newContext();
     const page = await browserCtx.newPage();
-    await page.goto(`/en/split/${shareToken}/claim`);
+    await page.goto(`/split/${shareToken}/claim`);
 
     await expect(page.getByTestId('claim-join-form')).toBeVisible({ timeout: 15000 });
     await page.getByTestId('claim-name-input').fill('Alice');
@@ -99,7 +99,7 @@ test.describe('Finding #5: paidByIndex mapping', () => {
         tax: 100,
         tip: 0,
         total: 1100,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [{ name: 'Item', quantity: 1, unitPrice: 1000, totalPrice: 1000 }],
       // Only valid people (server filters blanks)
@@ -131,7 +131,7 @@ test.describe('Finding #6: shared item assignment', () => {
         tax: 100,
         tip: 0,
         total: 1100,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [{ name: 'Shared Item', quantity: 1, unitPrice: 1000, totalPrice: 1000 }],
       people: [{ name: 'Alice' }, { name: 'Bob' }],
@@ -165,7 +165,7 @@ test.describe('Finding #7: empty items submit guard', () => {
         tax: 0,
         tip: 0,
         total: 0,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [],
       people: [{ name: 'Alice' }],

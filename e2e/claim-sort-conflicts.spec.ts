@@ -15,7 +15,7 @@ test.describe('Claim page — item sorting', () => {
         tax: 400,
         tip: 0,
         total: 4400,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Latte', quantity: 1, unitPrice: 1000, totalPrice: 1000 },
@@ -46,7 +46,7 @@ test.describe('Claim page — item sorting', () => {
     // Bob opens in browser
     const browserCtx = await browser.newContext();
     const page = await browserCtx.newPage();
-    await page.goto(`/en/split/${shareToken}/claim`);
+    await page.goto(`/split/${shareToken}/claim`);
 
     // Join as Bob
     await expect(page.getByTestId('claim-join-form')).toBeVisible({ timeout: 15000 });
@@ -95,7 +95,7 @@ test.describe('Claim page — conflict detection', () => {
         tax: 300,
         tip: 0,
         total: 3300,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Pizza', quantity: 1, unitPrice: 1000, totalPrice: 1000 },
@@ -125,7 +125,7 @@ test.describe('Claim page — conflict detection', () => {
     // Bob opens in browser
     const browserCtx = await browser.newContext();
     const page = await browserCtx.newPage();
-    await page.goto(`/en/split/${shareToken}/claim`);
+    await page.goto(`/split/${shareToken}/claim`);
 
     // Join as Bob
     await expect(page.getByTestId('claim-join-form')).toBeVisible({ timeout: 15000 });
@@ -166,7 +166,7 @@ test.describe('Claim page — conflict detection', () => {
         tax: 200,
         tip: 0,
         total: 2200,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Burger', quantity: 1, unitPrice: 1000, totalPrice: 1000 },
@@ -224,7 +224,7 @@ test.describe('Claim page — conflict detection', () => {
         tax: 200,
         tip: 0,
         total: 2200,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Coffee', quantity: 1, unitPrice: 1000, totalPrice: 1000 },

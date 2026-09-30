@@ -7,7 +7,7 @@ test.describe.configure({ mode: 'serial' });
 test.describe('Admin audit log', () => {
   test('admin can view audit log section', async ({ page }) => {
     await login(page, users.alice.email, users.alice.password);
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     await expect(page.getByRole('heading', { name: 'Audit Log' })).toBeVisible();
   });
@@ -26,7 +26,7 @@ test.describe('User suspend/unsuspend', () => {
   test('admin page shows suspend button for non-admin users', async ({ page }) => {
     test.setTimeout(60000);
     await login(page, users.alice.email, users.alice.password);
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     // Wait for User Management section and search for the dedicated suspend test user
     const userSection = page.locator('section', {
@@ -89,7 +89,7 @@ test.describe('User suspend/unsuspend', () => {
 test.describe('Registration control', () => {
   test('admin page shows registration control section', async ({ page }) => {
     await login(page, users.alice.email, users.alice.password);
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     await expect(page.getByRole('heading', { name: 'Registration Control' })).toBeVisible();
   });
@@ -153,7 +153,7 @@ test.describe('Registration control', () => {
 
     try {
       // Try to register without an invite code
-      await page.goto('/en/register');
+      await page.goto('/register');
 
       // Invite code field should be visible
       await expect(page.getByLabel('Invite Code')).toBeVisible();
@@ -197,7 +197,7 @@ test.describe('Registration control', () => {
     try {
       const testEmail = `invite-test-${Date.now()}@test.com`;
 
-      await page.goto('/en/register');
+      await page.goto('/register');
       await page.getByLabel('Name').fill('Invited User');
       await page.getByLabel('Email').fill(testEmail);
       await page.getByLabel('Password').fill('password123');
@@ -224,7 +224,7 @@ test.describe('Registration control', () => {
     });
 
     try {
-      await page.goto('/en/register');
+      await page.goto('/register');
 
       // Should show closed message
       await expect(page.getByText('Registration is currently closed')).toBeVisible();
@@ -244,7 +244,7 @@ test.describe('Registration control', () => {
 test.describe('Announcement banner', () => {
   test('admin page shows announcement section', async ({ page }) => {
     await login(page, users.alice.email, users.alice.password);
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     await expect(page.getByRole('heading', { name: 'Announcement Banner' })).toBeVisible();
   });
@@ -273,7 +273,7 @@ test.describe('Announcement banner', () => {
 test.describe('Global activity feed', () => {
   test('admin page shows activity feed section', async ({ page }) => {
     await login(page, users.alice.email, users.alice.password);
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     await expect(page.getByRole('heading', { name: 'Global Activity Feed' })).toBeVisible();
   });
@@ -289,7 +289,7 @@ test.describe('Global activity feed', () => {
 test.describe('AI usage statistics', () => {
   test('admin page shows AI usage section', async ({ page }) => {
     await login(page, users.alice.email, users.alice.password);
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     await expect(page.getByRole('heading', { name: 'AI Usage' })).toBeVisible();
   });
@@ -309,7 +309,7 @@ test.describe('AI usage statistics', () => {
 test.describe('Admin tools', () => {
   test('admin page shows tools section with export and email buttons', async ({ page }) => {
     await login(page, users.alice.email, users.alice.password);
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     await expect(page.getByRole('heading', { name: 'Admin Tools' })).toBeVisible();
     await expect(page.getByText('Data Export')).toBeVisible();
@@ -345,7 +345,7 @@ test.describe('Admin tools', () => {
 test.describe('Server logs', () => {
   test('admin page shows server logs section', async ({ page }) => {
     await login(page, users.alice.email, users.alice.password);
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     await expect(page.getByRole('heading', { name: 'Server Logs' })).toBeVisible();
 
@@ -379,7 +379,7 @@ test.describe('Server logs', () => {
 test.describe('User impersonation', () => {
   test('admin page shows impersonate button for non-admin users', async ({ page }) => {
     await login(page, users.alice.email, users.alice.password);
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     // Use User Management section — search for dedicated test user
     const userSection = page.locator('section', {
@@ -422,7 +422,7 @@ test.describe('User impersonation', () => {
 
   test('impersonation banner appears immediately after clicking impersonate', async ({ page }) => {
     await login(page, users.alice.email, users.alice.password);
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     // Search for Bob in User Management section
     const userSection = page.locator('section', {

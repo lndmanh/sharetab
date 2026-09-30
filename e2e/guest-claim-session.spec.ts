@@ -9,7 +9,7 @@ const RECEIPT_DATA = {
   tax: 200,
   tip: 100,
   total: 2300,
-  currency: 'USD',
+  currency: 'VND',
 };
 
 const ITEMS = [
@@ -309,7 +309,7 @@ test.describe('Guest claiming sessions', () => {
         tax: 300,
         tip: 500,
         total: 4100,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: splitItems,
       creatorName: 'Alice',

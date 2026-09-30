@@ -11,7 +11,7 @@ test.describe('Guest split — item split UI', () => {
 
   test('split a multi-quantity item into two rows on the guest split page', async ({ page }) => {
     // === Step 1: Upload receipt ===
-    await page.goto('/en/split');
+    await page.goto('/split');
 
     const [fileChooser] = await Promise.all([
       page.waitForEvent('filechooser'),
@@ -74,7 +74,7 @@ test.describe('Guest split — item split UI', () => {
   });
 
   test('split button only appears on items with quantity > 1', async ({ page }) => {
-    await page.goto('/en/split');
+    await page.goto('/split');
 
     const [fileChooser] = await Promise.all([
       page.waitForEvent('filechooser'),

@@ -6,7 +6,7 @@ test.describe('Receipt rescan — smoke tests', () => {
     await login(page, users.alice.email, users.alice.password);
     const { groupId, dispose } = await createTestGroup(users.alice.email, users.alice.password, [], 'Rescan Test');
 
-    await page.goto(`/en/groups/${groupId}/scan`);
+    await page.goto(`/groups/${groupId}/scan`);
     await expect(page.getByRole('heading', { name: 'Scan Receipt' })).toBeVisible();
     await expect(page.getByText('Upload a receipt')).toBeVisible();
 
@@ -14,7 +14,7 @@ test.describe('Receipt rescan — smoke tests', () => {
   });
 
   test('guest split page renders upload step', async ({ page }) => {
-    await page.goto('/en/split');
+    await page.goto('/split');
     await expect(page.getByText('Split a bill')).toBeVisible();
     await expect(page.getByText('Snap a Bill')).toBeVisible();
   });

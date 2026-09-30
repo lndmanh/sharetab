@@ -15,7 +15,7 @@ test.describe('Claim page — rejoin buttons', () => {
         tax: 200,
         tip: 100,
         total: 2300,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Coffee', quantity: 1, unitPrice: 1000, totalPrice: 1000 },
@@ -37,7 +37,7 @@ test.describe('Claim page — rejoin buttons', () => {
     await ctx.dispose();
 
     // Open the claim page in a browser — should show rejoin button for Alice
-    await page.goto(`/en/split/${shareToken}/claim`);
+    await page.goto(`/split/${shareToken}/claim`);
     await expect(page.getByTestId('claim-join-form')).toBeVisible({ timeout: 10000 });
 
     // Rejoin button for Alice should be visible
@@ -57,7 +57,7 @@ test.describe('Claim page — rejoin buttons', () => {
         tax: 150,
         tip: 200,
         total: 1850,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [{ name: 'Burger', quantity: 1, unitPrice: 1500, totalPrice: 1500 }],
       creatorName: 'Carol',
@@ -67,7 +67,7 @@ test.describe('Claim page — rejoin buttons', () => {
     await ctx.dispose();
 
     // Open in browser and click Carol's rejoin button (first join — no token needed)
-    await page.goto(`/en/split/${shareToken}/claim`);
+    await page.goto(`/split/${shareToken}/claim`);
     await expect(page.getByTestId('claim-join-form')).toBeVisible({ timeout: 10000 });
 
     await page.getByTestId('rejoin-person-0').click();
@@ -115,7 +115,7 @@ test.describe('Claim page — receipt image', () => {
         tax: 100,
         tip: 0,
         total: 1100,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [{ name: 'Test Item', quantity: 1, unitPrice: 1000, totalPrice: 1000 }],
       creatorName: 'Tester',
@@ -127,7 +127,7 @@ test.describe('Claim page — receipt image', () => {
     await anonCtx.dispose();
 
     // Open claim page
-    await page.goto(`/en/split/${shareToken}/claim`);
+    await page.goto(`/split/${shareToken}/claim`);
     await expect(page.getByTestId('claim-join-form')).toBeVisible({ timeout: 10000 });
 
     // Receipt image toggle should be visible
@@ -159,7 +159,7 @@ test.describe('Claim session — API: mySplits tracks claim sessions', () => {
         tax: 250,
         tip: 300,
         total: 3050,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Pepperoni', quantity: 1, unitPrice: 1500, totalPrice: 1500 },

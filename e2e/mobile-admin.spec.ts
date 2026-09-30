@@ -29,7 +29,7 @@ test.describe('Mobile Admin Page', () => {
   });
 
   test('admin page renders all sections on mobile', async ({ page }) => {
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     const sections = [
       'System Health',
@@ -51,7 +51,7 @@ test.describe('Mobile Admin Page', () => {
   });
 
   test('user management table is horizontally scrollable', async ({ page }) => {
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     const userSection = page.locator('section', {
       has: page.getByRole('heading', { name: 'User Management' }),
@@ -69,7 +69,7 @@ test.describe('Mobile Admin Page', () => {
   });
 
   test('group overview table is horizontally scrollable', async ({ page }) => {
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     const groupSection = page.locator('section', {
       has: page.getByRole('heading', { name: 'Group Overview' }),
@@ -85,7 +85,7 @@ test.describe('Mobile Admin Page', () => {
   });
 
   test('system health cards stack in single column', async ({ page }) => {
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     const healthSection = page.locator('section', {
       has: page.getByRole('heading', { name: 'System Health' }),
@@ -111,7 +111,7 @@ test.describe('Mobile Admin Page', () => {
   });
 
   test('storage stats cards stack in single column', async ({ page }) => {
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     const storageSection = page.locator('section', {
       has: page.getByRole('heading', { name: 'Storage Stats' }),
@@ -132,7 +132,7 @@ test.describe('Mobile Admin Page', () => {
   });
 
   test('server logs section renders with filter buttons', async ({ page }) => {
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     const logsSection = page.locator('section', {
       has: page.getByRole('heading', { name: 'Server Logs' }),
@@ -146,7 +146,7 @@ test.describe('Mobile Admin Page', () => {
   });
 
   test('sidebar is hidden on mobile admin page', async ({ page }) => {
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     await expect(page.locator('aside')).not.toBeVisible();
     await expect(page.locator('header')).toBeVisible();

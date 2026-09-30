@@ -139,7 +139,7 @@ test.describe('Expenses', () => {
         'Split Mode Stability',
       );
 
-      await page.goto(`/en/groups/${groupId}/expenses/new`);
+      await page.goto(`/groups/${groupId}/expenses/new`);
       await page.getByLabel('Amount').fill('100.00');
 
       await page.getByRole('button', { name: /Exact/ }).click();
@@ -168,7 +168,7 @@ test.describe('Expenses', () => {
         'Pct Pre-fill',
       );
 
-      await page.goto(`/en/groups/${groupId}/expenses/new`);
+      await page.goto(`/groups/${groupId}/expenses/new`);
       await page.getByLabel('Amount').fill('90.00');
       await page.getByRole('button', { name: /Percentage/ }).click();
 
@@ -200,7 +200,7 @@ test.describe('Expenses', () => {
       });
       const expense = (await expRes.json()).result?.data?.json;
 
-      await page.goto(`/en/groups/${groupId}/expenses/${expense.id}/edit`);
+      await page.goto(`/groups/${groupId}/expenses/${expense.id}/edit`);
       await expect(page.getByRole('heading', { name: 'Edit Expense' })).toBeVisible();
 
       await page.getByRole('button', { name: /Percentage/ }).click();

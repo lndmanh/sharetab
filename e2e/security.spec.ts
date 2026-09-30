@@ -8,7 +8,7 @@ test.describe('Security & Edge Cases', () => {
   test.describe('API Security', () => {
     test('9.5 — XSS in registration name is escaped', async ({ page }) => {
       const email = `xss-${Date.now()}@test.com`;
-      await page.goto('/en/register');
+      await page.goto('/register');
       await page.getByLabel('Name').fill('<script>alert(1)</script>');
       await page.getByLabel('Email').fill(email);
       await page.getByLabel('Password').fill('testpass123');
@@ -24,7 +24,7 @@ test.describe('Security & Edge Cases', () => {
 
     test("9.6 — SQL injection in name doesn't break DB", async ({ page }) => {
       const email = `sqli-${Date.now()}@test.com`;
-      await page.goto('/en/register');
+      await page.goto('/register');
       await page.getByLabel('Name').fill('\'; DROP TABLE "User";--');
       await page.getByLabel('Email').fill(email);
       await page.getByLabel('Password').fill('testpass123');
@@ -80,7 +80,7 @@ test.describe('Security & Edge Cases', () => {
   test.describe('Route Protection', () => {
     test('1.3.1 — /dashboard redirects to login', async () => {
       const ctx = await request.newContext({ baseURL: BASE_URL });
-      const response = await ctx.get('/en/dashboard', { maxRedirects: 0 });
+      const response = await ctx.get('/dashboard', { maxRedirects: 0 });
       expect(response.status()).toBe(307);
       expect(response.headers()['location']).toContain('/login');
       await ctx.dispose();
@@ -88,7 +88,7 @@ test.describe('Security & Edge Cases', () => {
 
     test('1.3.2 — /groups redirects to login', async () => {
       const ctx = await request.newContext({ baseURL: BASE_URL });
-      const response = await ctx.get('/en/groups', { maxRedirects: 0 });
+      const response = await ctx.get('/groups', { maxRedirects: 0 });
       expect(response.status()).toBe(307);
       expect(response.headers()['location']).toContain('/login');
       await ctx.dispose();
@@ -96,7 +96,7 @@ test.describe('Security & Edge Cases', () => {
 
     test('1.3.3 — /settings redirects to login', async () => {
       const ctx = await request.newContext({ baseURL: BASE_URL });
-      const response = await ctx.get('/en/settings', { maxRedirects: 0 });
+      const response = await ctx.get('/settings', { maxRedirects: 0 });
       expect(response.status()).toBe(307);
       expect(response.headers()['location']).toContain('/login');
       await ctx.dispose();

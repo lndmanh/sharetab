@@ -6,7 +6,7 @@ test.use({ viewport: { width: 430, height: 932 } });
 test.describe('Venmo admin toggle', () => {
   test('admin can enable and disable Venmo setting', async ({ page }) => {
     await login(page, users.alice.email, users.alice.password);
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     // Find the Venmo section
     const toggleBtn = page.getByTestId('venmo-toggle-btn');

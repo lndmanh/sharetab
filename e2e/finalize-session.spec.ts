@@ -14,7 +14,7 @@ test.describe('Finalize claim session', () => {
         tax: 200,
         tip: 300,
         total: 2500,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Latte', quantity: 1, unitPrice: 1000, totalPrice: 1000 },
@@ -41,7 +41,7 @@ test.describe('Finalize claim session', () => {
 
     const browserCtx = await browser.newContext();
     const page = await browserCtx.newPage();
-    await page.goto(`/en/split/${shareToken}/claim`);
+    await page.goto(`/split/${shareToken}/claim`);
 
     // Join as Alice (auto-rejoin from localStorage won't work, join manually)
     await expect(page.getByTestId('claim-join-form')).toBeVisible({ timeout: 15000 });
@@ -71,7 +71,7 @@ test.describe('Finalize claim session', () => {
         tax: 100,
         tip: 0,
         total: 1100,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [{ name: 'Coffee', quantity: 1, unitPrice: 1000, totalPrice: 1000 }],
       creatorName: 'Alice',
@@ -82,7 +82,7 @@ test.describe('Finalize claim session', () => {
 
     const browserCtx = await browser.newContext();
     const page = await browserCtx.newPage();
-    await page.goto(`/en/split/${shareToken}/claim`);
+    await page.goto(`/split/${shareToken}/claim`);
 
     await expect(page.getByTestId('claim-join-form')).toBeVisible({ timeout: 15000 });
     await page.getByTestId('claim-name-input').fill('Alice');
@@ -111,7 +111,7 @@ test.describe('Finalize claim session', () => {
         tax: 300,
         tip: 400,
         total: 3700,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Burger', quantity: 1, unitPrice: 1500, totalPrice: 1500 },
@@ -139,7 +139,7 @@ test.describe('Finalize claim session', () => {
     // Alice opens in browser
     const browserCtx = await browser.newContext();
     const page = await browserCtx.newPage();
-    await page.goto(`/en/split/${shareToken}/claim`);
+    await page.goto(`/split/${shareToken}/claim`);
 
     await expect(page.getByTestId('claim-join-form')).toBeVisible({ timeout: 15000 });
     await page.getByTestId('claim-name-input').fill('Alice');
@@ -192,7 +192,7 @@ test.describe('Finalize claim session', () => {
         tax: 200,
         tip: 300,
         total: 2500,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Pizza', quantity: 1, unitPrice: 1200, totalPrice: 1200 },

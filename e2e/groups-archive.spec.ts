@@ -206,7 +206,7 @@ test.describe('Group Archiving', () => {
         'Archive UI Settings',
       );
 
-      await page.goto(`/en/groups/${groupId}/settings`);
+      await page.goto(`/groups/${groupId}/settings`);
       await expect(page.getByRole('button', { name: /Archive group/ })).toBeVisible();
 
       await dispose();
@@ -222,7 +222,7 @@ test.describe('Group Archiving', () => {
         'Archive Redirect Test',
       );
 
-      await page.goto(`/en/groups/${groupId}/settings`);
+      await page.goto(`/groups/${groupId}/settings`);
       page.on('dialog', (dialog) => dialog.accept());
       await page.getByRole('button', { name: /Archive group/ }).click();
       await page.waitForURL('**/groups', { timeout: 10000 });
@@ -242,7 +242,7 @@ test.describe('Group Archiving', () => {
 
       await trpcMutation(owner, 'groups.archive', { groupId });
 
-      await page.goto('/en/groups');
+      await page.goto('/groups');
       await page.getByPlaceholder('Search groups...').fill('Archive Hidden Test');
       // Should not appear in active list
       await expect(page.getByText('Archive Hidden Test')).not.toBeVisible();
@@ -262,7 +262,7 @@ test.describe('Group Archiving', () => {
 
       await trpcMutation(owner, 'groups.archive', { groupId });
 
-      await page.goto('/en/groups');
+      await page.goto('/groups');
       await page.getByRole('button', { name: /Archived/ }).click();
       await page.getByPlaceholder('Search groups...').fill('Archive Toggle Test');
       await expect(page.getByText('Archive Toggle Test').first()).toBeVisible();
@@ -282,7 +282,7 @@ test.describe('Group Archiving', () => {
 
       await trpcMutation(owner, 'groups.archive', { groupId });
 
-      await page.goto(`/en/groups/${groupId}`);
+      await page.goto(`/groups/${groupId}`);
       await expect(page.getByText('This group is archived')).toBeVisible();
       // Add Expense button should be hidden
       await expect(page.getByRole('button', { name: 'Add Expense' })).not.toBeVisible();
@@ -303,7 +303,7 @@ test.describe('Group Archiving', () => {
       await trpcMutation(owner, 'groups.archive', { groupId });
 
       // Go to settings and unarchive
-      await page.goto(`/en/groups/${groupId}/settings`);
+      await page.goto(`/groups/${groupId}/settings`);
       await expect(page.getByText('This group is archived')).toBeVisible();
       await page.getByRole('button', { name: /Unarchive/ }).click();
 
@@ -311,7 +311,7 @@ test.describe('Group Archiving', () => {
       await expect(page.getByText('This group is archived')).not.toBeVisible({ timeout: 5000 });
 
       // Should appear back in active groups list
-      await page.goto('/en/groups');
+      await page.goto('/groups');
       await page.getByPlaceholder('Search groups...').fill('Unarchive UI Test');
       await expect(page.getByText('Unarchive UI Test').first()).toBeVisible();
 

@@ -14,7 +14,7 @@ import {
 test.describe('Password Change — Settings Page', () => {
   test('settings page shows change password form', async ({ page }) => {
     await login(page, testUsers.password.email, testUsers.password.password);
-    await page.goto('/en/settings');
+    await page.goto('/settings');
     await expect(page.getByText('Change Password', { exact: true })).toBeVisible();
     await expect(page.locator('#currentPassword')).toBeVisible();
     await expect(page.locator('#newPassword')).toBeVisible();
@@ -24,7 +24,7 @@ test.describe('Password Change — Settings Page', () => {
 
   test('wrong current password shows error', async ({ page }) => {
     await login(page, testUsers.password.email, testUsers.password.password);
-    await page.goto('/en/settings');
+    await page.goto('/settings');
     await page.locator('#currentPassword').fill('wrong-password');
     await page.locator('#newPassword').fill('newpass456');
     await page.locator('#confirmPassword').fill('newpass456');
@@ -34,7 +34,7 @@ test.describe('Password Change — Settings Page', () => {
 
   test('mismatched passwords shows inline warning', async ({ page }) => {
     await login(page, testUsers.password.email, testUsers.password.password);
-    await page.goto('/en/settings');
+    await page.goto('/settings');
     await page.locator('#newPassword').fill('newpass456');
     await page.locator('#confirmPassword').fill('different789');
     await expect(page.getByText(/match/i)).toBeVisible();
@@ -47,7 +47,7 @@ test.describe('Password Change — Settings Page', () => {
     const newPassword = 'newpass456';
 
     await register(page, 'PW Change User', email, oldPassword);
-    await page.goto('/en/settings');
+    await page.goto('/settings');
 
     await page.locator('#currentPassword').fill(oldPassword);
     await page.locator('#newPassword').fill(newPassword);
@@ -78,12 +78,12 @@ test.describe('Password Change — Settings Page', () => {
 
 test.describe('Forgot Password — Login Page', () => {
   test('login page shows forgot password link', async ({ page }) => {
-    await page.goto('/en/login');
+    await page.goto('/login');
     await expect(page.getByText('Forgot password?')).toBeVisible();
   });
 
   test('clicking forgot password switches to magic link mode', async ({ page }) => {
-    await page.goto('/en/login');
+    await page.goto('/login');
     await page.getByText('Forgot password?').click();
     await expect(page.getByRole('button', { name: 'Send magic link' })).toBeVisible();
     await expect(page.locator('#password')).not.toBeVisible();

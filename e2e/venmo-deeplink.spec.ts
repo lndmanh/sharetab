@@ -25,7 +25,7 @@ test.describe('Venmo deeplink payments', () => {
         tax: 300,
         tip: 400,
         total: 3700,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Latte', quantity: 1, unitPrice: 1500, totalPrice: 1500 },
@@ -44,7 +44,7 @@ test.describe('Venmo deeplink payments', () => {
     const browserCtx = await browser.newContext({ viewport: { width: 430, height: 932 } });
     const page = await browserCtx.newPage();
     await login(page, users.alice.email, users.alice.password);
-    await page.goto(`/en/split/${shareToken}`);
+    await page.goto(`/split/${shareToken}`);
 
     const venmoInput = page.getByTestId('venmo-handle-input');
     await expect(venmoInput).toBeVisible({ timeout: 15000 });
@@ -67,7 +67,7 @@ test.describe('Venmo deeplink payments', () => {
         tax: 400,
         tip: 600,
         total: 5000,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Steak', quantity: 1, unitPrice: 2000, totalPrice: 2000 },
@@ -88,7 +88,7 @@ test.describe('Venmo deeplink payments', () => {
     // Guest views the split — pay buttons should show for non-payers
     const browserCtx = await browser.newContext({ viewport: { width: 430, height: 932 } });
     const page = await browserCtx.newPage();
-    await page.goto(`/en/split/${shareToken}`);
+    await page.goto(`/split/${shareToken}`);
 
     await expect(page.getByTestId('venmo-handle-display')).toBeVisible({ timeout: 15000 });
 
@@ -120,7 +120,7 @@ test.describe('Venmo deeplink payments', () => {
         tax: 250,
         tip: 350,
         total: 3100,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [{ name: 'Large Pizza', quantity: 1, unitPrice: 2500, totalPrice: 2500 }],
       people: [{ name: 'Alice Johnson' }, { name: 'Bob' }],
@@ -133,7 +133,7 @@ test.describe('Venmo deeplink payments', () => {
     // Guest views — verify deeplink URL
     const browserCtx = await browser.newContext({ viewport: { width: 430, height: 932 } });
     const page = await browserCtx.newPage();
-    await page.goto(`/en/split/${shareToken}`);
+    await page.goto(`/split/${shareToken}`);
 
     await expect(page.getByTestId('venmo-handle-display')).toBeVisible({ timeout: 15000 });
     const payBtn = page.locator('[data-testid^="venmo-pay-"]').first();
@@ -167,7 +167,7 @@ test.describe('Venmo deeplink payments', () => {
         tax: 200,
         tip: 300,
         total: 2500,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [{ name: 'Burger', quantity: 1, unitPrice: 2000, totalPrice: 2000 }],
       people: [{ name: 'Alice Johnson' }, { name: 'Bob' }],
@@ -185,7 +185,7 @@ test.describe('Venmo deeplink payments', () => {
     // Open the split as an unauthenticated guest in a fresh browser context
     const browserCtx = await browser.newContext({ viewport: { width: 430, height: 932 } });
     const page = await browserCtx.newPage();
-    await page.goto(`/en/split/${shareToken}`);
+    await page.goto(`/split/${shareToken}`);
 
     // Guest sees the handle as read-only text (not an editable input)
     const venmoDisplay = page.getByTestId('venmo-handle-display');
@@ -209,7 +209,7 @@ test.describe('Venmo deeplink payments', () => {
     const creatorCtx = await browser.newContext({ viewport: { width: 430, height: 932 } });
     const creatorPage = await creatorCtx.newPage();
     await login(creatorPage, users.alice.email, users.alice.password);
-    await creatorPage.goto(`/en/split/${shareToken}`);
+    await creatorPage.goto(`/split/${shareToken}`);
     await expect(creatorPage.getByTestId('venmo-handle-input')).toHaveValue('alice-venmo-e2e', { timeout: 15000 });
     await creatorPage.screenshot({ path: 'docs/screenshots/venmo-creator-sees-own-handle.png', fullPage: true });
 
@@ -232,7 +232,7 @@ test.describe('Venmo deeplink payments', () => {
         tax: 150,
         tip: 200,
         total: 1850,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [{ name: 'Tea', quantity: 1, unitPrice: 1500, totalPrice: 1500 }],
       people: [{ name: 'Alice Johnson' }, { name: 'Bob' }],
@@ -246,7 +246,7 @@ test.describe('Venmo deeplink payments', () => {
     const browserCtx = await browser.newContext({ viewport: { width: 430, height: 932 } });
     const page = await browserCtx.newPage();
     await login(page, users.alice.email, users.alice.password);
-    await page.goto(`/en/split/${shareToken}`);
+    await page.goto(`/split/${shareToken}`);
 
     const venmoInput = page.getByTestId('venmo-handle-input');
     await expect(venmoInput).toBeVisible({ timeout: 15000 });
@@ -280,7 +280,7 @@ test.describe('Venmo deeplink payments', () => {
         tax: 300,
         tip: 0,
         total: 3300,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Pasta', quantity: 1, unitPrice: 1500, totalPrice: 1500 },
@@ -300,7 +300,7 @@ test.describe('Venmo deeplink payments', () => {
     const creatorBrowser = await browser.newContext({ viewport: { width: 430, height: 932 } });
     const creatorPage = await creatorBrowser.newPage();
     await login(creatorPage, users.alice.email, users.alice.password);
-    await creatorPage.goto(`/en/split/${shareToken}`);
+    await creatorPage.goto(`/split/${shareToken}`);
 
     await expect(creatorPage.getByTestId('venmo-handle-input')).toBeVisible({ timeout: 15000 });
     // Payer sees NO pay buttons — they all point to the payer's own handle
@@ -314,7 +314,7 @@ test.describe('Venmo deeplink payments', () => {
     // Guest (Bob) views the same split — should see read-only handle AND pay button
     const guestBrowser = await browser.newContext({ viewport: { width: 430, height: 932 } });
     const guestPage = await guestBrowser.newPage();
-    await guestPage.goto(`/en/split/${shareToken}`);
+    await guestPage.goto(`/split/${shareToken}`);
 
     await expect(guestPage.getByTestId('venmo-handle-display')).toBeVisible({ timeout: 15000 });
     const payButtons = guestPage.locator('[data-testid^="venmo-pay-"]');

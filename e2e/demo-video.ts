@@ -53,7 +53,8 @@ async function main() {
       const r = await fetch(`/api/trpc/groups.list?${query}`);
       return r.json();
     });
-    const apartmentGroup = groupsData?.result?.data?.json?.find(
+    const response = groupsData as { result?: { data?: { json?: { name: string; id: string }[] } } };
+    const apartmentGroup = response.result?.data?.json?.find(
       (g: { name: string; id: string }) => g.name === 'Apartment',
     );
     if (!apartmentGroup) throw new Error('Apartment group not found in seed data');

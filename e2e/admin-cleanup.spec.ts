@@ -28,7 +28,7 @@ test.describe('Admin — Guest Split Cleanup', () => {
             tax: 80,
             tip: 0,
             total: 1080,
-            currency: 'USD',
+            currency: 'VND',
           },
           items: [{ name: 'Test Item', quantity: 1, unitPrice: 1000, totalPrice: 1000 }],
           people: [{ name: 'Tester' }],
@@ -70,7 +70,7 @@ test.describe('Admin — Guest Split Cleanup', () => {
 
   test('admin tools section shows Guest Split Cleanup card', async ({ page }) => {
     await login(page, users.alice.email, users.alice.password);
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     // Should see the cleanup card within the tools section
     const toolsSection = page.locator('section', {
@@ -84,7 +84,7 @@ test.describe('Admin — Guest Split Cleanup', () => {
 
   test('purge button works and shows result', async ({ page }) => {
     await login(page, users.alice.email, users.alice.password);
-    await page.goto('/en/admin');
+    await page.goto('/admin');
 
     const toolsSection = page.locator('section', {
       has: page.getByRole('heading', { name: 'Admin Tools' }),

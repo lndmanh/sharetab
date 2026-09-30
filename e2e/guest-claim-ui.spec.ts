@@ -4,7 +4,7 @@ const BASE = process.env.BASE_URL || 'http://localhost:3001';
 
 test.describe('Guest Split UI Flow', () => {
   test('guest split page loads and shows upload options with testids', async ({ page }) => {
-    await page.goto('/en/split');
+    await page.goto('/split');
     await expect(page.getByText('Split a bill')).toBeVisible();
 
     // Verify upload areas are present with correct testids
@@ -32,7 +32,7 @@ test.describe('Guest Split — Share Result Page', () => {
             tax: 360,
             tip: 700,
             total: 5560,
-            currency: 'USD',
+            currency: 'VND',
           },
           items: [
             { name: 'Tacos x3', quantity: 3, unitPrice: 500, totalPrice: 1500 },
@@ -60,7 +60,7 @@ test.describe('Guest Split — Share Result Page', () => {
   });
 
   test('result page displays split summary with data-testids', async ({ page }) => {
-    await page.goto(`/en/split/${shareToken}`);
+    await page.goto(`/split/${shareToken}`);
 
     // Result wrapper should be visible
     await expect(page.getByTestId('split-result')).toBeVisible();
@@ -79,7 +79,7 @@ test.describe('Guest Split — Share Result Page', () => {
   });
 
   test('person cards contain correct names', async ({ page }) => {
-    await page.goto(`/en/split/${shareToken}`);
+    await page.goto(`/split/${shareToken}`);
     await expect(page.getByTestId('split-result')).toBeVisible();
 
     // Verify each person card has the correct person's name
@@ -96,7 +96,7 @@ test.describe('Guest Split — Share Result Page', () => {
   });
 
   test('invalid share token shows error state', async ({ page }) => {
-    await page.goto('/en/split/nonexistent-token-abc123');
+    await page.goto('/split/nonexistent-token-abc123');
     await expect(page.getByText('Split not found')).toBeVisible();
   });
 });

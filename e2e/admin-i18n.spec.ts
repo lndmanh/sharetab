@@ -7,11 +7,12 @@ import { users, login } from './helpers';
  * and checks for visual issues (clipping, overflow, layout breakage).
  */
 
-const LOCALES = ['en', 'es', 'fr', 'de', 'ja', 'ko', 'zh-CN'] as const;
+const LOCALES = ['en', 'vi'] as const;
 
 async function loginAndGoToAdmin(page: Page, locale: string) {
   await login(page, users.alice.email, users.alice.password);
-  await page.goto(`/${locale}/admin`);
+  await page.context().addCookies([{ name: 'NEXT_LOCALE', value: locale, url: page.url() || 'http://localhost:3001' }]);
+  await page.goto('/admin');
   await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 }
 
@@ -153,20 +154,20 @@ test.describe('Admin i18n — mobile layout', () => {
     });
   });
 
-  test('German (long strings) mobile viewport screenshot', async ({ page }) => {
+  test('Vietnamese mobile viewport screenshot', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await loginAndGoToAdmin(page, 'de');
+    await loginAndGoToAdmin(page, 'vi');
     await page.waitForTimeout(500);
 
     await page.screenshot({
-      path: 'docs/screenshots/admin-i18n-de-mobile.png',
+      path: 'docs/screenshots/admin-i18n-vi-mobile.png',
       fullPage: true,
     });
   });
 
-  test('Japanese mobile viewport no overflow', async ({ page }) => {
+  test('Vietnamese mobile viewport no overflow', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await loginAndGoToAdmin(page, 'ja');
+    await loginAndGoToAdmin(page, 'vi');
     await page.waitForTimeout(500);
 
     const hasOverflow = await page.evaluate(() => {
@@ -175,7 +176,7 @@ test.describe('Admin i18n — mobile layout', () => {
     expect(hasOverflow).toBe(false);
 
     await page.screenshot({
-      path: 'docs/screenshots/admin-i18n-ja-mobile.png',
+      path: 'docs/screenshots/admin-i18n-vi-overflow.png',
       fullPage: true,
     });
   });
@@ -184,7 +185,7 @@ test.describe('Admin i18n — mobile layout', () => {
 // ─── Visual regression: key sections across locales ───────────────────
 
 test.describe('Admin i18n — visual screenshots', () => {
-  for (const locale of ['en', 'es', 'de', 'ja', 'ko'] as const) {
+  for (const locale of ['en', 'vi'] as const) {
     test(`[${locale}] full page screenshot for visual review`, async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 800 });
       await loginAndGoToAdmin(page, locale);

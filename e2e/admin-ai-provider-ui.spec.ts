@@ -9,7 +9,7 @@ async function goToAdminAndWaitForProviderSection(
   testInfo: { skip: (condition: boolean, reason: string) => void },
 ) {
   await login(page, users.alice.email, users.alice.password);
-  await page.goto('/en/admin');
+  await page.goto('/admin');
   await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
   const section = page.getByTestId('ai-provider-test-section');
   const visible = await section.isVisible().catch(() => false);

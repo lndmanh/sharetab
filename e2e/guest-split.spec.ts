@@ -4,20 +4,20 @@ const BASE = process.env.BASE_URL || 'http://localhost:3001';
 
 test.describe('Guest Bill Split — UI', () => {
   test('split page loads without authentication', async ({ page }) => {
-    await page.goto('/en/split');
+    await page.goto('/split');
     await expect(page.getByText('Split a bill')).toBeVisible();
     // Upload options: camera and gallery
     await expect(page.getByText('Snap a Bill')).toBeVisible();
   });
 
   test('split page shows upload form with camera option', async ({ page }) => {
-    await page.goto('/en/split');
+    await page.goto('/split');
     const fileInput = page.locator('input[type="file"]').first();
     await expect(fileInput).toBeAttached();
   });
 
   test('login page links to guest split', async ({ page }) => {
-    await page.goto('/en/login');
+    await page.goto('/login');
     const splitLink = page.getByRole('link', { name: 'Split without an account' });
     await expect(splitLink).toBeVisible();
     await expect(splitLink).toHaveAttribute('href', /\/split$/);
@@ -39,7 +39,7 @@ test.describe('Guest Bill Split — API happy path', () => {
             tax: 240,
             tip: 500,
             total: 3740,
-            currency: 'USD',
+            currency: 'VND',
           },
           items: [
             { name: 'Burger', quantity: 1, unitPrice: 1500, totalPrice: 1500 },
@@ -103,7 +103,7 @@ test.describe('Guest Bill Split — API happy path', () => {
             tax: 300,
             tip: 300,
             total: 3600,
-            currency: 'USD',
+            currency: 'VND',
           },
           items: [{ name: 'Brunch', quantity: 1, unitPrice: 3000, totalPrice: 3000 }],
           creatorName: 'Alice',
@@ -187,7 +187,7 @@ test.describe('Guest Bill Split — Share Page', () => {
             tax: 200,
             tip: 400,
             total: 3000,
-            currency: 'USD',
+            currency: 'VND',
           },
           items: [{ name: 'Large Pizza', quantity: 1, unitPrice: 2400, totalPrice: 2400 }],
           people: [{ name: 'Charlie' }, { name: 'Dave' }],
@@ -220,7 +220,7 @@ test.describe('Guest Bill Split — Share Page', () => {
   });
 
   test('invalid share token shows not found', async ({ page }) => {
-    await page.goto('/en/split/nonexistent-token-abc123');
+    await page.goto('/split/nonexistent-token-abc123');
     await expect(page.getByText('Split not found')).toBeVisible();
   });
 });

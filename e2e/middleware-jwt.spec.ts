@@ -8,7 +8,7 @@ test.describe('Middleware JWT validation', () => {
 
     // Set a forged session cookie — valid cookie name but garbage JWT value
     await ctx.storageState();
-    const res = await ctx.get('/en/dashboard', {
+    const res = await ctx.get('/dashboard', {
       maxRedirects: 0,
       headers: {
         Cookie: 'authjs.session-token=forged-jwt-value-that-is-not-valid',
@@ -24,7 +24,7 @@ test.describe('Middleware JWT validation', () => {
   test('forged __Secure- session cookie does not grant access', async () => {
     const ctx = await request.newContext({ baseURL: BASE_URL });
 
-    const res = await ctx.get('/en/groups', {
+    const res = await ctx.get('/groups', {
       maxRedirects: 0,
       headers: {
         Cookie: '__Secure-authjs.session-token=totally-fake-token-123',
@@ -46,7 +46,7 @@ test.describe('Middleware JWT validation', () => {
       Buffer.from(JSON.stringify({ sub: 'fake-user-id', exp: 1000000000, iat: 999999000 })).toString('base64url') +
       '.invalid-signature';
 
-    const res = await ctx.get('/en/settings', {
+    const res = await ctx.get('/settings', {
       maxRedirects: 0,
       headers: {
         Cookie: `authjs.session-token=${fakeJwt}`,
@@ -61,7 +61,7 @@ test.describe('Middleware JWT validation', () => {
   test('no cookie at all redirects to login', async () => {
     const ctx = await request.newContext({ baseURL: BASE_URL });
 
-    const res = await ctx.get('/en/dashboard', { maxRedirects: 0 });
+    const res = await ctx.get('/dashboard', { maxRedirects: 0 });
     expect(res.status()).toBe(307);
     expect(res.headers()['location']).toContain('/login');
     await ctx.dispose();

@@ -6,7 +6,7 @@ test.use({ viewport: { width: 430, height: 932 } });
 test.describe('Venmo profile integration', () => {
   test('settings page shows Venmo username field', async ({ page }) => {
     await login(page, users.alice.email, users.alice.password);
-    await page.goto('/en/settings');
+    await page.goto('/settings');
 
     const venmoInput = page.getByTestId('venmo-username-input');
     await expect(venmoInput).toBeVisible({ timeout: 15000 });
@@ -17,7 +17,7 @@ test.describe('Venmo profile integration', () => {
 
   test('saving Venmo username persists in profile', async ({ page }) => {
     await login(page, users.alice.email, users.alice.password);
-    await page.goto('/en/settings');
+    await page.goto('/settings');
 
     const venmoInput = page.getByTestId('venmo-username-input');
     await expect(venmoInput).toBeVisible({ timeout: 15000 });

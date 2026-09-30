@@ -54,7 +54,8 @@ async function getApartmentGroupId(page: Page): Promise<string> {
     const r = await fetch(`/api/trpc/groups.list?${query}`);
     return r.json();
   });
-  const group = data?.result?.data?.json?.find((g: { name: string }) => g.name === 'Apartment');
+  const response = data as { result?: { data?: { json?: { name: string; id: string }[] } } };
+  const group = response.result?.data?.json?.find((g) => g.name === 'Apartment');
   if (!group) throw new Error('Apartment group not found in seed data');
   return group.id;
 }
@@ -508,67 +509,19 @@ async function recordAdminDashboard(browser: Browser): Promise<string> {
   return finalizeRecording(page, context);
 }
 
-async function recordMultiCurrency(browser: Browser): Promise<string> {
-  const context = await createRecordingContext(browser, MOBILE);
-  const page = await loginAs(context);
-
-  const groupId = await getApartmentGroupId(page);
-
-  // Navigate to new expense page (Apartment group is USD)
-  await page.goto(`/groups/${groupId}/expenses/new`);
-  await page.waitForURL(/\/expenses\/new$/, { timeout: 15000 });
-  await page.waitForSelector('select#currency', { timeout: 10000 });
-  await page.waitForTimeout(800);
-
-  // Fill in a trip expense
-  await page.getByLabel('Description').fill('Dinner in Paris');
-  await page.waitForTimeout(400);
-  await page.getByLabel('Amount').fill('85.00');
-  await page.waitForTimeout(400);
-  await page.locator('select#paidBy').selectOption({ index: 1 });
-  await page.waitForTimeout(400);
-
-  // Switch the expense currency to EUR — group uses USD, so the conversion panel appears
-  await page.locator('select#currency').selectOption('EUR');
-  await page.waitForTimeout(PAUSE_MEDIUM);
-
-  // Enable a manual rate to show the live converted total ("Converted: $92.65").
-  // Target the rate field by its "1 EUR = ? USD" placeholder rather than DOM order.
-  await page.getByText('Set exchange rate manually').click();
-  const rateInput = page.getByPlaceholder(/= \?/);
-  await rateInput.waitFor({ timeout: 5000 });
-  await rateInput.fill('1.09');
-  await page.waitForTimeout(PAUSE_HERO);
-
-  // Submit and land back on the group
-  await page.getByRole('button', { name: 'Add Expense' }).click();
-  await page.waitForURL(/\/groups\/\w+$/, { timeout: 15000 });
-  await page.waitForTimeout(PAUSE_MEDIUM);
-
-  return finalizeRecording(page, context);
-}
-
 async function recordLanguageSwitcher(browser: Browser): Promise<string> {
   const context = await createRecordingContext(browser, DESKTOP);
   const page = await loginAs(context);
   await page.waitForTimeout(PAUSE_MEDIUM);
 
-  // English → Español (localePrefix is "always", so the route replace is observable)
   await page.getByTestId('language-switcher').first().click();
-  await page.getByRole('menuitem', { name: '🇪🇸 Español' }).click();
-  await page.waitForURL('**/es/**', { timeout: 15000 });
+  await page.getByRole('menuitem', { name: '🇻🇳 Tiếng Việt' }).click();
+  await page.getByRole('heading', { name: 'Bảng điều khiển' }).waitFor({ timeout: 15000 });
   await page.waitForTimeout(PAUSE_HERO);
 
-  // Español → 日本語
-  await page.getByTestId('language-switcher').first().click();
-  await page.getByRole('menuitem', { name: '🇯🇵 日本語' }).click();
-  await page.waitForURL('**/ja/**', { timeout: 15000 });
-  await page.waitForTimeout(PAUSE_HERO);
-
-  // 日本語 → English
   await page.getByTestId('language-switcher').first().click();
   await page.getByRole('menuitem', { name: '🇺🇸 English' }).click();
-  await page.waitForURL('**/en/**', { timeout: 15000 });
+  await page.getByRole('heading', { name: 'Dashboard' }).waitFor({ timeout: 15000 });
   await page.waitForTimeout(PAUSE_MEDIUM);
 
   return finalizeRecording(page, context);
@@ -603,7 +556,7 @@ async function recordVenmoPay(browser: Browser): Promise<string> {
               tax: 400,
               tip: 600,
               total: 5000,
-              currency: 'USD',
+              currency: 'VND',
             },
             items: [
               { name: 'Ribeye Steak', quantity: 1, unitPrice: 2000, totalPrice: 2000 },
@@ -623,8 +576,8 @@ async function recordVenmoPay(browser: Browser): Promise<string> {
       if (!res.ok) {
         throw new Error(`guest.createSplit failed: HTTP ${res.status}`);
       }
-      const data = await res.json();
-      return data.result?.data?.json?.shareToken as string | undefined;
+      const data = (await res.json()) as { result?: { data?: { json?: { shareToken?: string } } } };
+      return data.result?.data?.json?.shareToken;
     });
   } finally {
     await setupCtx.close();
@@ -677,7 +630,6 @@ async function main() {
     { name: 'admin-dashboard', fn: recordAdminDashboard, desktop: true },
     // ── mutating scenes (run last so they don't pollute the views above) ──
     { name: 'add-expense', fn: recordAddExpense, desktop: false },
-    { name: 'multi-currency', fn: recordMultiCurrency, desktop: false },
     { name: 'receipt-scan', fn: recordReceiptScan, desktop: false },
     { name: 'venmo-pay', fn: recordVenmoPay, desktop: false },
   ];

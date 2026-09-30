@@ -14,7 +14,7 @@ test.describe('Group claiming units', () => {
         tax: 200,
         tip: 0,
         total: 2200,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Coffee', quantity: 1, unitPrice: 1000, totalPrice: 1000 },
@@ -28,7 +28,7 @@ test.describe('Group claiming units', () => {
 
     const browserCtx = await browser.newContext();
     const page = await browserCtx.newPage();
-    await page.goto(`/en/split/${shareToken}/claim`);
+    await page.goto(`/split/${shareToken}/claim`);
 
     await expect(page.getByTestId('claim-join-form')).toBeVisible({ timeout: 15000 });
 
@@ -51,7 +51,7 @@ test.describe('Group claiming units', () => {
         tax: 300,
         tip: 0,
         total: 3300,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Pizza', quantity: 1, unitPrice: 1500, totalPrice: 1500 },
@@ -65,7 +65,7 @@ test.describe('Group claiming units', () => {
 
     const browserCtx = await browser.newContext();
     const page = await browserCtx.newPage();
-    await page.goto(`/en/split/${shareToken}/claim`);
+    await page.goto(`/split/${shareToken}/claim`);
 
     await expect(page.getByTestId('claim-join-form')).toBeVisible({ timeout: 15000 });
 
@@ -93,7 +93,7 @@ test.describe('Group claiming units', () => {
         tax: 100,
         tip: 0,
         total: 1100,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [{ name: 'Salad', quantity: 1, unitPrice: 1000, totalPrice: 1000 }],
       creatorName: 'Alice',
@@ -104,7 +104,7 @@ test.describe('Group claiming units', () => {
 
     const browserCtx = await browser.newContext();
     const page = await browserCtx.newPage();
-    await page.goto(`/en/split/${shareToken}/claim`);
+    await page.goto(`/split/${shareToken}/claim`);
 
     await expect(page.getByTestId('claim-join-form')).toBeVisible({ timeout: 15000 });
     await page.getByTestId('claim-name-input').fill('Charlie');
@@ -135,7 +135,7 @@ test.describe('Group claiming units', () => {
         tax: 0,
         tip: 0,
         total: 3000,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [{ name: 'Shared Nachos', quantity: 1, unitPrice: 3000, totalPrice: 3000 }],
       creatorName: 'Alice & Bob',
@@ -216,7 +216,7 @@ test.describe('Group claiming units', () => {
         tax: 0,
         tip: 0,
         total: 3000,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [{ name: 'Shared Item', quantity: 1, unitPrice: 3000, totalPrice: 3000 }],
       creatorName: 'Alice',
@@ -284,7 +284,7 @@ test.describe('Group claiming units', () => {
         tax: 400,
         tip: 600,
         total: 5000,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Steak', quantity: 1, unitPrice: 2000, totalPrice: 2000 },
@@ -313,7 +313,7 @@ test.describe('Group claiming units', () => {
     // Alice & Bob open in browser
     const browserCtx = await browser.newContext();
     const page = await browserCtx.newPage();
-    await page.goto(`/en/split/${shareToken}/claim`);
+    await page.goto(`/split/${shareToken}/claim`);
 
     await expect(page.getByTestId('claim-join-form')).toBeVisible({ timeout: 15000 });
 
@@ -359,7 +359,7 @@ test.describe('Group claiming units', () => {
         tax: 200,
         tip: 0,
         total: 2200,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [
         { name: 'Item A', quantity: 1, unitPrice: 1000, totalPrice: 1000 },
@@ -373,7 +373,7 @@ test.describe('Group claiming units', () => {
 
     const browserCtx = await browser.newContext();
     const page = await browserCtx.newPage();
-    await page.goto(`/en/split/${shareToken}/claim`);
+    await page.goto(`/split/${shareToken}/claim`);
 
     // Join as Alice solo
     await expect(page.getByTestId('claim-join-form')).toBeVisible({ timeout: 15000 });
@@ -426,7 +426,7 @@ test.describe('Group claiming units', () => {
         tax: 100,
         tip: 0,
         total: 1100,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [{ name: 'Item', quantity: 1, unitPrice: 1000, totalPrice: 1000 }],
       creatorName: 'Couple',
@@ -445,7 +445,7 @@ test.describe('Group claiming units', () => {
 
     const browserCtx = await browser.newContext();
     const page = await browserCtx.newPage();
-    await page.goto(`/en/split/${shareToken}/claim`);
+    await page.goto(`/split/${shareToken}/claim`);
 
     // Join (rejoin) as Couple with groupSize=2
     await expect(page.getByTestId('claim-join-form')).toBeVisible({ timeout: 15000 });
@@ -487,7 +487,7 @@ test.describe('Group claiming units', () => {
         tax: 100,
         tip: 0,
         total: 1100,
-        currency: 'USD',
+        currency: 'VND',
       },
       items: [{ name: 'Item', quantity: 1, unitPrice: 1000, totalPrice: 1000 }],
       creatorName: 'Alice',

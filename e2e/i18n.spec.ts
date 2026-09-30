@@ -2,28 +2,26 @@ import { test, expect } from '@playwright/test';
 import { users, login } from './helpers';
 
 test.describe('i18n Language Switching', () => {
-  test('switch from English to Spanish and back on login page', async ({ page }) => {
-    await page.goto('/en/login');
+  test('switch from English to Vietnamese and back on login page', async ({ page }) => {
+    await page.goto('/login');
     await expect(page.getByText('Welcome back')).toBeVisible();
 
-    // Open language switcher and pick Spanish
     await page.getByTestId('language-switcher').first().click();
-    await expect(page.getByRole('menuitem', { name: '🇪🇸 Español' })).toBeVisible();
-    await page.getByRole('menuitem', { name: '🇪🇸 Español' }).click();
-    await page.waitForURL('**/es/login');
+    await expect(page.getByRole('menuitem', { name: '🇻🇳 Tiếng Việt' })).toBeVisible();
+    await page.getByRole('menuitem', { name: '🇻🇳 Tiếng Việt' }).click();
+    await expect(page).toHaveURL(/\/login$/);
 
-    // Verify Spanish translations
-    await expect(page.getByText('Bienvenido de nuevo')).toBeVisible();
-    await expect(page.getByText('Inicia sesión en tu cuenta de ShareTab')).toBeVisible();
-    await expect(page.getByLabel('Correo electrónico')).toBeVisible();
-    await expect(page.getByLabel('Contraseña')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Iniciar sesión', exact: true })).toBeVisible();
+    await expect(page.getByText('Chào mừng trở lại')).toBeVisible();
+    await expect(page.getByText('Đăng nhập vào tài khoản ShareTab của bạn')).toBeVisible();
+    await expect(page.getByLabel('Email')).toBeVisible();
+    await expect(page.getByLabel('Mật khẩu')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Đăng nhập', exact: true })).toBeVisible();
 
     // Switch back to English
     await page.getByTestId('language-switcher').first().click();
     await expect(page.getByRole('menuitem', { name: '🇺🇸 English' })).toBeVisible();
     await page.getByRole('menuitem', { name: '🇺🇸 English' }).click();
-    await page.waitForURL('**/en/login');
+    await expect(page).toHaveURL(/\/login$/);
 
     // Verify English restored
     await expect(page.getByText('Welcome back')).toBeVisible();
@@ -32,26 +30,25 @@ test.describe('i18n Language Switching', () => {
     await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
   });
 
-  test('switch from English to Spanish and back on register page', async ({ page }) => {
-    await page.goto('/en/register');
+  test('switch from English to Vietnamese and back on register page', async ({ page }) => {
+    await page.goto('/register');
     await expect(page.getByText('Create your account')).toBeVisible();
 
-    // Switch to Spanish
     await page.getByTestId('language-switcher').first().click();
-    await expect(page.getByRole('menuitem', { name: '🇪🇸 Español' })).toBeVisible();
-    await page.getByRole('menuitem', { name: '🇪🇸 Español' }).click();
-    await page.waitForURL('**/es/register');
+    await expect(page.getByRole('menuitem', { name: '🇻🇳 Tiếng Việt' })).toBeVisible();
+    await page.getByRole('menuitem', { name: '🇻🇳 Tiếng Việt' }).click();
+    await expect(page).toHaveURL(/\/register$/);
 
-    await expect(page.getByText('Crea tu cuenta')).toBeVisible();
-    await expect(page.getByText('Empieza a dividir gastos con amigos')).toBeVisible();
-    await expect(page.getByLabel('Nombre')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Crear cuenta' })).toBeVisible();
+    await expect(page.getByText('Tạo tài khoản')).toBeVisible();
+    await expect(page.getByText('Bắt đầu chia sẻ chi tiêu với bạn bè')).toBeVisible();
+    await expect(page.getByLabel('Tên')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Tạo tài khoản' })).toBeVisible();
 
     // Switch back to English
     await page.getByTestId('language-switcher').first().click();
     await expect(page.getByRole('menuitem', { name: '🇺🇸 English' })).toBeVisible();
     await page.getByRole('menuitem', { name: '🇺🇸 English' }).click();
-    await page.waitForURL('**/en/register');
+    await expect(page).toHaveURL(/\/register$/);
 
     await expect(page.getByText('Create your account')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Create account' })).toBeVisible();
@@ -65,21 +62,20 @@ test.describe('i18n Language Switching', () => {
 
     // Click sidebar language switcher
     await page.getByTestId('language-switcher').first().click();
-    await expect(page.getByRole('menuitem', { name: '🇪🇸 Español' })).toBeVisible();
-    await page.getByRole('menuitem', { name: '🇪🇸 Español' }).click();
-    await page.waitForURL('**/es/dashboard');
+    await expect(page.getByRole('menuitem', { name: '🇻🇳 Tiếng Việt' })).toBeVisible();
+    await page.getByRole('menuitem', { name: '🇻🇳 Tiếng Việt' }).click();
+    await expect(page).toHaveURL(/\/dashboard$/);
 
-    // Verify Spanish dashboard
-    await expect(page.getByRole('heading', { name: 'Panel' })).toBeVisible();
-    await expect(page.getByText('Te deben').first()).toBeVisible();
-    await expect(page.getByText('Debes').first()).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Grupos' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Bảng điều khiển' })).toBeVisible();
+    await expect(page.getByText('Bạn được nhận').first()).toBeVisible();
+    await expect(page.getByText('Bạn nợ').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Nhóm' })).toBeVisible();
 
     // Switch back to English
     await page.getByTestId('language-switcher').first().click();
     await expect(page.getByRole('menuitem', { name: '🇺🇸 English' })).toBeVisible();
     await page.getByRole('menuitem', { name: '🇺🇸 English' }).click();
-    await page.waitForURL('**/en/dashboard');
+    await expect(page).toHaveURL(/\/dashboard$/);
 
     // Verify English restored
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
@@ -87,19 +83,22 @@ test.describe('i18n Language Switching', () => {
     await expect(page.getByRole('heading', { name: 'Groups' })).toBeVisible();
   });
 
-  test('locale prefix is preserved in navigation links', async ({ page }) => {
-    await page.goto('/es/login');
-    await expect(page.getByText('Bienvenido de nuevo')).toBeVisible();
+  test('navigation links stay unprefixed', async ({ page }) => {
+    await page.context().addCookies([
+      { name: 'NEXT_LOCALE', value: 'vi', url: 'http://localhost:3001' },
+    ]);
+    await page.goto('/login');
+    await expect(page.getByText('Chào mừng trở lại')).toBeVisible();
 
-    const createLink = page.getByRole('link', { name: 'Crear una' });
-    await expect(createLink).toHaveAttribute('href', /^\/es\/register/);
+    const createLink = page.getByRole('link', { name: 'Tạo tài khoản' });
+    await expect(createLink).toHaveAttribute('href', '/register');
 
-    const splitLink = page.getByRole('link', { name: 'Dividir sin cuenta' });
-    await expect(splitLink).toHaveAttribute('href', '/es/split');
+    const splitLink = page.getByRole('link', { name: 'Chia hóa đơn không cần tài khoản' });
+    await expect(splitLink).toHaveAttribute('href', '/split');
   });
 
-  test('root URL redirects to locale-prefixed URL', async ({ page }) => {
+  test('root URL redirects to dashboard without a locale prefix', async ({ page }) => {
     await page.goto('/');
-    await expect(page).toHaveURL(/\/(en|es)\//);
+    await expect(page).toHaveURL(/\/dashboard$/);
   });
 });
