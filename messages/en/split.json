@@ -1,12 +1,25 @@
 {
   "upload": {
     "title": "Split a bill",
-    "subtitle": "Snap a photo of your receipt. No account needed.",
+    "subtitle": "Snap a receipt or enter the bill yourself. No account needed.",
     "snapBill": "Snap a Bill",
     "or": "Or",
     "chooseGallery": "Choose from Gallery",
     "uploading": "Uploading...",
     "uploadFailed": "Upload failed"
+  },
+  "manual": {
+    "open": "Enter a bill manually",
+    "title": "Quick bill",
+    "description": "Enter a total, then choose who shares it. No photo needed.",
+    "name": "Bill name",
+    "total": "Total (VND)",
+    "tax": "Tax (optional)",
+    "tip": "Tip (optional)",
+    "next": "Next: Add people",
+    "nameError": "Enter a bill name.",
+    "totalError": "Enter a valid total above zero.",
+    "extrasError": "Tax and tip must be valid amounts smaller than the total."
   },
   "processing": {
     "title": "Processing receipt...",
@@ -18,6 +31,7 @@
     "subtitle": "Add the names of everyone sharing this bill.",
     "personPlaceholder": "Person {index}",
     "addPerson": "Add person",
+    "removePerson": "Remove person",
     "whoPaid": "Who paid the bill?",
     "nextAssign": "Next: Assign Items",
     "rescanCorrections": "Rescan with corrections",

@@ -60,6 +60,7 @@
     "title": "Scan Receipt",
     "upload": "Upload a receipt",
     "uploadDescription": "Take a photo or upload an image of your receipt. AI will extract the items, tax, and tip so you can assign them to group members.",
+    "enterManually": "Enter an expense without a photo",
     "receiptImage": "Receipt image",
     "processing": "Processing receipt...",
     "using": "Using:",

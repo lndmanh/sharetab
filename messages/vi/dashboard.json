@@ -1,0 +1,20 @@
+{
+  "title": "Bảng điều khiển",
+  "youOwe": "Bạn nợ",
+  "youAreOwed": "Bạn được nhận",
+  "owedToYouTitle": "Người nợ bạn",
+  "youOweTitle": "Người bạn nợ",
+  "settledUp": "Đã thanh toán hết!",
+  "noGroups": "Chưa có nhóm",
+  "noGroupsDescription": "Tạo nhóm để bắt đầu chia chi tiêu.",
+  "createGroup": "Tạo nhóm",
+  "viewAll": "Xem tất cả",
+  "recentActivity": "Hoạt động gần đây",
+  "noActivity": "Chưa có hoạt động gần đây",
+  "groups": "Nhóm",
+  "showMore": "Xem thêm",
+  "members": "{count, plural, one {# thành viên} other {# thành viên}}",
+  "archivedGroups": "{count, plural, one {# nhóm đã lưu trữ} other {# nhóm đã lưu trữ}}",
+  "mixedCurrencies": "Nhiều loại tiền",
+  "mixedCurrenciesDebts": "Các nhóm dùng loại tiền khác nhau nên không gộp số dư được. Mở một nhóm để xem số dư của nhóm đó."
+}

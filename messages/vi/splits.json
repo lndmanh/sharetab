@@ -1,0 +1,17 @@
+{
+  "title": "Lượt chia của tôi",
+  "description": "Lịch sử chia hóa đơn khách",
+  "empty": "Chưa có lượt chia",
+  "emptyDescription": "Dùng Chia nhanh để chia hóa đơn với bạn bè.",
+  "goToSplit": "Chia một hóa đơn",
+  "loadMore": "Tải thêm",
+  "people": "{count} người",
+  "items": "{count} món",
+  "claiming": "Đang chia",
+  "finalized": "Hoàn tất",
+  "untitled": "Lượt chia chưa đặt tên",
+  "delete": "Xóa lượt chia",
+  "deleteConfirm": "Xóa lượt chia này? Không thể hoàn tác.",
+  "deleted": "Đã xóa lượt chia",
+  "loading": "Đang tải..."
+}

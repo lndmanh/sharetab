@@ -1,0 +1,68 @@
+{
+  "nav": {
+    "dashboard": "Bảng điều khiển",
+    "groups": "Nhóm",
+    "quickSplit": "Chia nhanh",
+    "mySplits": "Lượt chia của tôi",
+    "settings": "Cài đặt",
+    "admin": "Quản trị",
+    "signOut": "Đăng xuất",
+    "changeLanguage": "Đổi ngôn ngữ"
+  },
+  "actions": {
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "delete": "Xóa",
+    "edit": "Sửa",
+    "create": "Tạo",
+    "back": "Quay lại",
+    "close": "Đóng",
+    "confirm": "Xác nhận",
+    "loading": "Đang tải...",
+    "saving": "Đang lưu...",
+    "submit": "Gửi",
+    "openMenu": "Mở menu",
+    "copyFailed": "Không sao chép được liên kết"
+  },
+  "brand": {
+    "name": "ShareTab",
+    "tagline": "Chia sẻ chi tiêu tự lưu trữ với quét hóa đơn bằng AI"
+  },
+  "sponsor": {
+    "title": "Ủng hộ ShareTab",
+    "description": "ShareTab miễn phí và mã nguồn mở. Nếu nó giúp bạn tiết kiệm thời gian, hãy cân nhắc tài trợ phát triển.",
+    "cta": "Tài trợ trên GitHub"
+  },
+  "errors": {
+    "generic": "Đã xảy ra lỗi. Vui lòng thử lại.",
+    "notFound": "Không tìm thấy",
+    "unauthorized": "Bạn cần đăng nhập để xem trang này."
+  },
+  "loadingMessages": {
+    "msg0": "Đang dạy AI đọc chữ viết tay của phục vụ...",
+    "msg1": "Đang tính xem bạn thực sự chi bao nhiêu cho 'món khai vị'...",
+    "msg2": "Đang đếm những phần khoai tây chiên không ai gọi nhưng ai cũng ăn...",
+    "msg3": "Đang phát hiện khoản phí bí ẩn và quyết định đáng ngờ...",
+    "msg4": "Đang phân tích thiệt hại cho ví và lòng tự trọng...",
+    "msg5": "Đang giải mã phép tính nhà hàng (tiết lộ: không bao giờ khớp)...",
+    "msg6": "Đang đoán 'MKT' nghĩa là gì (thường không phải tin tốt)...",
+    "msg7": "Đang chuyển chữ tượng hình thành số...",
+    "msg8": "Đang biện minh cho món tráng miệng bạn chắc chắn không cần...",
+    "msg9": "Đang tính mức hối tiếc trên mỗi đồng đã chi...",
+    "msg10": "Đang xem bạn có phải ăn mì gói cả tuần không...",
+    "msg11": "Đang đọc giữa các dòng chữ (và vết rượu)...",
+    "msg12": "Đang phát hiện bạn đã tip trên thuế trên tip...",
+    "msg13": "Đang tìm những cách viết sáng tạo của 'Coca-Cola'...",
+    "msg14": "Đang tự hỏi vì sao nước có ga đắt hơn bia...",
+    "msg15": "Đang chia sợi tóc... và hóa đơn...",
+    "msg16": "Đang nhờ hóa đơn viết rõ hơn một chút...",
+    "msg17": "Đang xử lý những lựa chọn tài chính không mấy khôn ngoan...",
+    "msg18": "Đang đếm số lần ai đó nói 'chia đều cho nhanh'...",
+    "msg19": "Đang tìm xem ai gọi ly cocktail 40 đô...",
+    "msg20": "Đang dạy robot hiểu hũ tiền tip...",
+    "msg21": "Đang giải mã lời tiên tri trên giấy nhiệt...",
+    "msg22": "Đang chạy thuật toán cho phụ phí guacamole...",
+    "msg23": "Đang tham khảo nghệ thuật cổ xưa đọc hóa đơn...",
+    "msg24": "Đang dịch mực nhòe thành những con số lạnh..."
+  }
+}

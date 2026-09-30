@@ -1,0 +1,25 @@
+{
+  "title": "Cài đặt",
+  "profile": {
+    "title": "Hồ sơ",
+    "email": "Email",
+    "name": "Tên",
+    "save": "Lưu",
+    "saving": "Đang lưu...",
+    "saved": "Đã cập nhật hồ sơ!",
+    "venmo": "Tên Venmo",
+    "venmoPlaceholder": "@username",
+    "language": "Ngôn ngữ",
+    "languageDescription": "Chọn ngôn ngữ bạn muốn dùng"
+  },
+  "password": {
+    "title": "Đổi mật khẩu",
+    "current": "Mật khẩu hiện tại",
+    "new": "Mật khẩu mới",
+    "confirm": "Xác nhận mật khẩu mới",
+    "mismatch": "Mật khẩu không khớp",
+    "submit": "Đổi mật khẩu",
+    "submitting": "Đang đổi...",
+    "success": "Đã đổi mật khẩu!"
+  }
+}

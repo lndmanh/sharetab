@@ -35,21 +35,14 @@ export function stripLocalePrefix(path: string): string {
   return `${normalized}${suffix}`;
 }
 
-export function withLocalePrefix(path: string, locale: Locale): string {
-  const { pathname, suffix } = splitPathSuffix(path);
-  if (hasLocalePrefix(path)) {
-    return `${pathname}${suffix}`;
-  }
-
-  const normalized = pathname.startsWith('/') ? pathname : `/${pathname}`;
-  const localized = normalized === '/' ? `/${locale}` : `/${locale}${normalized}`;
-  return `${localized}${suffix}`;
+export function withLocalePrefix(path: string, _locale: Locale): string {
+  return stripLocalePrefix(path);
 }
 
-export function normalizeCallbackPath(rawCallbackUrl: string | null, locale: Locale): string {
+export function normalizeCallbackPath(rawCallbackUrl: string | null, _locale: Locale): string {
   if (!isSafeInternalPath(rawCallbackUrl)) {
-    return `/${locale}/dashboard`;
+    return '/dashboard';
   }
 
-  return withLocalePrefix(rawCallbackUrl, locale);
+  return stripLocalePrefix(rawCallbackUrl);
 }
