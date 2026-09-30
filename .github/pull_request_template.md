@@ -8,9 +8,9 @@
 
 ## Test Plan
 
-- [ ] `npm run lint` passes
-- [ ] `npm test` passes
-- [ ] `npm run build` passes
+- [ ] `pnpm run lint` passes
+- [ ] `pnpm test` passes
+- [ ] `pnpm run build` passes
 - [ ] Tested manually in the browser (describe what you clicked through)
 - [ ] E2E tests added or updated (if applicable)
 

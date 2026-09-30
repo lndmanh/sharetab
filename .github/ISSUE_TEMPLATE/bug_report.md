@@ -24,10 +24,10 @@ What actually happened.
 
 ## Environment
 
-- ShareTab version / Docker image tag:
+- ShareTab commit or version:
 - Browser (if UI bug):
 - AI provider (if receipt scanning bug):
-- Deployment type: Docker / bare metal / dev
+- Deployment type: local Worker / Cloudflare Worker
 
 ## Logs / Screenshots
 

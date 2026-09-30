@@ -4,14 +4,10 @@
 # week instead of a cascade of conflicting singles.
 #
 # Ecosystems:
-#   npm            root package.json + package-lock.json
+#   npm            root package.json + pnpm-lock.yaml
 #   github-actions .github/workflows/*.yml
-#   docker         docker/Dockerfile base image
 #
-# CI runs on GitHub-hosted runners (public repo), so bot PRs need no runner
-# variable. auto-release.yml runs on every push to main and cuts a build tag,
-# so a merged dependency bump gets one like any other merge; promote-stable.yml
-# is manual (workflow_dispatch) and is not triggered by these merges.
+# CI runs on GitHub-hosted runners; dependency updates do not deploy the private Worker.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -43,11 +39,3 @@ updates:
       ci-actions:
         patterns:
           - '*'
-
-  - package-ecosystem: docker
-    directory: /docker
-    schedule:
-      interval: weekly
-    commit-message:
-      prefix: chore
-      include: scope
