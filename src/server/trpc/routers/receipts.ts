@@ -8,7 +8,11 @@ import { logger } from '../../lib/logger';
 import { parseExtractedData } from '../../lib/json-schemas';
 import { getAIProvidersWithFallback, getConfiguredProviderPriority } from '@/server/ai/registry';
 import { getExchangeRate, convertCents } from '../../lib/exchange-rates';
+import { APP_CURRENCY } from '@/lib/currencies';
 import { stripUndefined } from '../../lib/strip-undefined';
+import { env } from 'cloudflare:workers';
+import { randomUUID } from 'node:crypto';
+import { requireD1Row, clearD1Guard } from '../../lib/d1-atomic';
 
 /**
  * Verify that a receipt exists and the user has access to it (via group membership).
@@ -113,7 +117,6 @@ export const receiptsRouter = createTRPCRouter({
 
       try {
         return await processReceiptImage({
-          db: ctx.db,
           receiptId: input.receiptId,
           receipt,
           ...(input.correctionHint !== undefined ? { correctionHint: input.correctionHint } : {}),
@@ -272,64 +275,58 @@ export const receiptsRouter = createTRPCRouter({
         });
       }
 
-      return ctx.db.$transaction(async (tx) => {
-        const current = await tx.receiptItem.findUniqueOrThrow({
-          where: { id: input.itemId },
+      const current = item;
+      const maxNewTotal = current.totalPrice - 1;
+      if (maxNewTotal <= 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Item price too low to split',
         });
+      }
 
-        if (input.splitQuantity >= current.quantity) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Split quantity must be less than total quantity',
-          });
-        }
+      const newTotalPrice = Math.min(current.unitPrice * input.splitQuantity, maxNewTotal);
+      const remainingQuantity = current.quantity - input.splitQuantity;
+      const remainingTotalPrice = current.totalPrice - newTotalPrice;
 
-        const maxNewTotal = current.totalPrice - 1;
-        if (maxNewTotal <= 0) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Item price too low to split',
-          });
-        }
-
-        const newTotalPrice = Math.min(current.unitPrice * input.splitQuantity, maxNewTotal);
-        const remainingQuantity = current.quantity - input.splitQuantity;
-        const remainingTotalPrice = current.totalPrice - newTotalPrice;
-
-        if (newTotalPrice <= 0 || remainingTotalPrice <= 0) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Split would result in invalid price distribution',
-          });
-        }
-
-        await tx.receiptItem.updateMany({
-          where: {
-            receiptId: current.receiptId,
-            sortOrder: { gt: current.sortOrder },
-          },
-          data: { sortOrder: { increment: 1 } },
+      if (newTotalPrice <= 0 || remainingTotalPrice <= 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Split would result in invalid price distribution',
         });
+      }
 
-        await tx.receiptItem.update({
-          where: { id: input.itemId },
-          data: {
-            quantity: remainingQuantity,
-            totalPrice: remainingTotalPrice,
-          },
-        });
-
-        return tx.receiptItem.create({
-          data: {
-            receiptId: current.receiptId,
-            name: current.name,
-            quantity: input.splitQuantity,
-            unitPrice: current.unitPrice,
-            totalPrice: newTotalPrice,
-            sortOrder: current.sortOrder + 1,
-          },
-        });
-      });
+      const newItemId = randomUUID();
+      await env.DB.batch([
+        requireD1Row(
+          'SELECT 1 FROM ReceiptItem WHERE id = ? AND quantity = ? AND totalPrice = ?',
+          input.itemId,
+          current.quantity,
+          current.totalPrice,
+        ),
+        env.DB.prepare('UPDATE ReceiptItem SET sortOrder = sortOrder + 1 WHERE receiptId = ? AND sortOrder > ?').bind(
+          current.receiptId,
+          current.sortOrder,
+        ),
+        env.DB.prepare('UPDATE ReceiptItem SET quantity = ?, totalPrice = ? WHERE id = ?').bind(
+          remainingQuantity,
+          remainingTotalPrice,
+          input.itemId,
+        ),
+        env.DB.prepare(
+          `INSERT INTO ReceiptItem (id, receiptId, name, quantity, unitPrice, totalPrice, sortOrder)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        ).bind(
+          newItemId,
+          current.receiptId,
+          current.name,
+          input.splitQuantity,
+          current.unitPrice,
+          newTotalPrice,
+          current.sortOrder + 1,
+        ),
+        clearD1Guard(),
+      ]);
+      return ctx.db.receiptItem.findUniqueOrThrow({ where: { id: newItemId } });
     }),
 
   updateExtractedData: protectedProcedure
@@ -380,7 +377,6 @@ export const receiptsRouter = createTRPCRouter({
 
     try {
       return await processReceiptImage({
-        db: ctx.db,
         receiptId: input.receiptId,
         receipt: { imagePath: receipt.imagePath, mimeType: receipt.mimeType },
         logPrefix: 'receipt.retry',
@@ -532,9 +528,7 @@ export const receiptsRouter = createTRPCRouter({
       );
 
       // Currency conversion for receipt expenses
-      const rawCurrency = extractedData.currency;
-      const isValidIso = rawCurrency && /^[a-zA-Z]{3}$/.test(rawCurrency);
-      const receiptCurrency = (isValidIso ? rawCurrency : group!.currency).toUpperCase();
+      const receiptCurrency = APP_CURRENCY;
       const groupCurrency = group!.currency.toUpperCase();
       let exchangeRate: number | null = null;
       let baseCurrencyAmount: number | null = null;
@@ -551,52 +545,70 @@ export const receiptsRouter = createTRPCRouter({
         baseCurrencyAmount = convertCents(totalAmount, exchangeRate);
       }
 
-      // All writes in a single transaction for atomicity
-      const expense = await ctx.db.$transaction(async (tx) => {
-        const exp = await tx.expense.create({
-          data: {
-            groupId: input.groupId,
-            title: input.title,
-            amount: totalAmount,
-            currency: receiptCurrency,
-            exchangeRate: exchangeRate ?? 1.0,
-            baseCurrencyAmount,
-            splitMode: 'ITEM',
-            paidById: input.paidById,
-            addedById: ctx.user.id,
-            receiptId: input.receiptId,
-            shares: {
-              create: Array.from(userTotals.entries()).map(([userId, amount]) => ({
-                userId,
-                amount,
-              })),
-            },
-          },
-        });
-
-        const itemIds = [...new Set(input.assignments.map((a) => a.receiptItemId))];
-        await tx.receiptItemAssignment.deleteMany({
-          where: { receiptItemId: { in: itemIds } },
-        });
-        await tx.receiptItemAssignment.createMany({
-          data: assignmentData,
-          skipDuplicates: true,
-        });
-
-        await tx.activityLog.create({
-          data: {
-            groupId: input.groupId,
-            userId: ctx.user.id,
-            type: 'EXPENSE_CREATED',
-            entityId: exp.id,
-            metadata: { title: input.title, amount: totalAmount, fromReceipt: true },
-          },
-        });
-
-        return exp;
-      });
-
-      return expense;
+      if (userTotals.size === 0) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Assign at least one item' });
+      const expenseId = randomUUID();
+      const now = new Date().toISOString();
+      const itemIds = [...new Set(input.assignments.map((a) => a.receiptItemId))];
+      const uniqueAssignments = new Map(
+        assignmentData.map((assignment) => [`${assignment.receiptItemId}\u0000${assignment.userId}`, assignment]),
+      );
+      await env.DB.batch([
+        requireD1Row(
+          `SELECT 1 FROM Receipt WHERE id = ? AND status = 'COMPLETED'
+          AND (groupId IS NULL OR groupId = ?) AND NOT EXISTS
+          (SELECT 1 FROM Expense WHERE receiptId = ?)`,
+          input.receiptId,
+          input.groupId,
+          input.receiptId,
+        ),
+        env.DB.prepare(
+          `INSERT INTO Expense (id, groupId, title, amount, currency, exchangeRate,
+          baseCurrencyAmount, splitMode, paidById, addedById, receiptId, expenseDate, createdAt, updatedAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 'ITEM', ?, ?, ?, ?, ?, ?)`,
+        ).bind(
+          expenseId,
+          input.groupId,
+          input.title,
+          totalAmount,
+          receiptCurrency,
+          exchangeRate ?? 1,
+          baseCurrencyAmount,
+          input.paidById,
+          ctx.user.id,
+          input.receiptId,
+          now,
+          now,
+          now,
+        ),
+        ...Array.from(userTotals, ([userId, amount]) =>
+          env.DB.prepare(
+            `INSERT INTO ExpenseShare
+          (id, expenseId, userId, amount, shares) VALUES (?, ?, ?, ?, 1)`,
+          ).bind(randomUUID(), expenseId, userId, amount),
+        ),
+        ...itemIds.map((itemId) =>
+          env.DB.prepare('DELETE FROM ReceiptItemAssignment WHERE receiptItemId = ?').bind(itemId),
+        ),
+        ...Array.from(uniqueAssignments.values(), (assignment) =>
+          env.DB.prepare(
+            `INSERT INTO ReceiptItemAssignment
+          (id, receiptItemId, userId) VALUES (?, ?, ?)`,
+          ).bind(randomUUID(), assignment.receiptItemId, assignment.userId),
+        ),
+        env.DB.prepare(
+          `INSERT INTO ActivityLog (id, groupId, userId, type, entityId, metadata, createdAt)
+          VALUES (?, ?, ?, 'EXPENSE_CREATED', ?, ?, ?)`,
+        ).bind(
+          randomUUID(),
+          input.groupId,
+          ctx.user.id,
+          expenseId,
+          JSON.stringify({ title: input.title, amount: totalAmount, fromReceipt: true }),
+          now,
+        ),
+        clearD1Guard(),
+      ]);
+      return ctx.db.expense.findUniqueOrThrow({ where: { id: expenseId } });
     }),
 
   saveForLater: groupMemberProcedure
@@ -619,106 +631,75 @@ export const receiptsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await verifyReceiptAccess(ctx.db, input.receiptId, ctx.user.id);
 
-      await ctx.db.$transaction(async (tx) => {
-        const receipt = await tx.receipt.findUnique({
-          where: { id: input.receiptId },
-        });
-        if (!receipt || receipt.status !== 'COMPLETED') {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Receipt must be processed first' });
-        }
-        // Check it's not already linked to an expense
-        const existing = await tx.expense.findUnique({
-          where: { receiptId: input.receiptId },
-        });
-        if (existing) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Receipt already has an expense' });
-        }
+      const receipt = await ctx.db.receipt.findUnique({ where: { id: input.receiptId } });
+      if (!receipt || receipt.status !== 'COMPLETED') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Receipt must be processed first' });
+      }
+      if (await ctx.db.expense.findUnique({ where: { receiptId: input.receiptId } })) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Receipt already has an expense' });
+      }
 
-        const userIdsToValidate = new Set<string>();
-        if (input.paidById) {
-          userIdsToValidate.add(input.paidById);
-        }
-        for (const assignment of input.assignments ?? []) {
+      const userIds = new Set<string>(input.paidById ? [input.paidById] : []);
+      for (const assignment of input.assignments ?? []) {
+        for (const userId of assignment.userIds) userIds.add(userId);
+      }
+      if (userIds.size > 0) {
+        const members = await ctx.db.groupMember.findMany({
+          where: { groupId: input.groupId, userId: { in: [...userIds] } },
+          select: { userId: true },
+        });
+        if (members.length !== userIds.size)
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unknown group member' });
+      }
+
+      const assignmentData = new Map<string, { receiptItemId: string; userId: string }>();
+      if (input.assignments) {
+        const ids = [...new Set(input.assignments.map((assignment) => assignment.receiptItemId))];
+        const items = await ctx.db.receiptItem.findMany({
+          where: { id: { in: ids }, receiptId: input.receiptId },
+          select: { id: true },
+        });
+        if (items.length !== ids.length) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unknown receipt item' });
+        for (const assignment of input.assignments) {
           for (const userId of assignment.userIds) {
-            userIdsToValidate.add(userId);
-          }
-        }
-
-        if (userIdsToValidate.size > 0) {
-          const validMembers = await tx.groupMember.findMany({
-            where: {
-              groupId: input.groupId,
-              userId: { in: Array.from(userIdsToValidate) },
-            },
-            select: { userId: true },
-          });
-          const validMemberIds = new Set(validMembers.map((member) => member.userId));
-          for (const userId of userIdsToValidate) {
-            if (!validMemberIds.has(userId)) {
-              throw new TRPCError({
-                code: 'BAD_REQUEST',
-                message: `User ${userId} is not a member of this group`,
-              });
-            }
-          }
-        }
-
-        await tx.receipt.update({
-          where: { id: input.receiptId },
-          data: {
-            groupId: input.groupId,
-            savedById: ctx.user.id,
-            ...(input.paidById !== undefined ? { paidById: input.paidById } : {}),
-          },
-        });
-
-        // Save partial assignments if provided (empty array clears existing)
-        if (input.assignments) {
-          // Validate that all receiptItemIds belong to this receipt
-          if (input.assignments.length > 0) {
-            const itemIds = input.assignments.map((a) => a.receiptItemId);
-            const validItems = await tx.receiptItem.findMany({
-              where: { id: { in: itemIds }, receiptId: input.receiptId },
-              select: { id: true },
-            });
-            const validIds = new Set(validItems.map((i) => i.id));
-            for (const id of itemIds) {
-              if (!validIds.has(id)) {
-                throw new TRPCError({ code: 'BAD_REQUEST', message: `Item ${id} does not belong to this receipt` });
-              }
-            }
-          }
-
-          // Clear any existing assignments first
-          await tx.receiptItemAssignment.deleteMany({
-            where: {
-              receiptItem: { receiptId: input.receiptId },
-            },
-          });
-
-          // Create new assignments
-          const seenAssignments = new Set<string>();
-          const assignmentData: { receiptItemId: string; userId: string }[] = [];
-          for (const assignment of input.assignments) {
-            for (const userId of assignment.userIds) {
-              const key = `${assignment.receiptItemId}\u0000${userId}`;
-              if (seenAssignments.has(key)) {
-                continue;
-              }
-              seenAssignments.add(key);
-              assignmentData.push({
-                receiptItemId: assignment.receiptItemId,
-                userId,
-              });
-            }
-          }
-          if (assignmentData.length > 0) {
-            await tx.receiptItemAssignment.createMany({
-              data: assignmentData,
+            assignmentData.set(`${assignment.receiptItemId}\u0000${userId}`, {
+              receiptItemId: assignment.receiptItemId,
+              userId,
             });
           }
         }
-      });
+      }
+
+      await env.DB.batch([
+        requireD1Row(
+          `SELECT 1 FROM Receipt WHERE id = ? AND status = 'COMPLETED'
+          AND NOT EXISTS (SELECT 1 FROM Expense WHERE receiptId = ?)`,
+          input.receiptId,
+          input.receiptId,
+        ),
+        env.DB.prepare(`UPDATE Receipt SET groupId = ?, savedById = ?, paidById = ?, updatedAt = ? WHERE id = ?`).bind(
+          input.groupId,
+          ctx.user.id,
+          input.paidById ?? receipt.paidById,
+          new Date().toISOString(),
+          input.receiptId,
+        ),
+        ...(input.assignments
+          ? [
+              env.DB.prepare(
+                `DELETE FROM ReceiptItemAssignment WHERE receiptItemId IN
+            (SELECT id FROM ReceiptItem WHERE receiptId = ?)`,
+              ).bind(input.receiptId),
+              ...Array.from(assignmentData.values(), (assignment) =>
+                env.DB.prepare(
+                  `INSERT INTO ReceiptItemAssignment
+            (id, receiptItemId, userId) VALUES (?, ?, ?)`,
+                ).bind(randomUUID(), assignment.receiptItemId, assignment.userId),
+              ),
+            ]
+          : []),
+        clearD1Guard(),
+      ]);
 
       return { success: true };
     }),
@@ -773,15 +754,12 @@ export const receiptsRouter = createTRPCRouter({
     await ctx.db.receiptItem.deleteMany({ where: { receiptId: input.receiptId } });
     await ctx.db.receipt.delete({ where: { id: input.receiptId } });
 
-    // Clean up the uploaded image file
+    // Clean up the private R2 object after deleting its DB record.
     try {
-      const { unlink } = await import('fs/promises');
-      const { resolveUploadPath } = await import('../../lib/upload-dir');
-      const filepath = resolveUploadPath(receipt.imagePath);
-      await unlink(filepath);
+      await env.RECEIPTS.delete(receipt.imagePath);
     } catch {
       // Non-fatal: file may already be missing
-      logger.warn('receipt.delete.fileCleanupFailed', {
+      logger.warn('receipt.delete.objectCleanupFailed', {
         receiptId: input.receiptId,
         imagePath: receipt.imagePath,
       });

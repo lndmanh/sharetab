@@ -1,5 +1,5 @@
 import { createTRPCRouter } from './init';
-import { authRouter } from './routers/auth';
+import { profileRouter } from './routers/profile';
 import { groupsRouter } from './routers/groups';
 import { expensesRouter } from './routers/expenses';
 import { balancesRouter } from './routers/balances';
@@ -10,7 +10,7 @@ import { guestRouter } from './routers/guest';
 import { adminRouter } from './routers/admin';
 
 export const appRouter = createTRPCRouter({
-  auth: authRouter,
+  profile: profileRouter,
   groups: groupsRouter,
   expenses: expensesRouter,
   balances: balancesRouter,

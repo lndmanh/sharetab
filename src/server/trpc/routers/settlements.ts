@@ -3,6 +3,9 @@ import { TRPCError } from '@trpc/server';
 import { createTRPCRouter, groupMemberProcedure } from '../init';
 import { getExchangeRate, convertCents } from '../../lib/exchange-rates';
 import { MAX_MONEY_CENTS } from '@/lib/money';
+import { APP_CURRENCY, currencySchema } from '@/lib/currencies';
+import { env } from 'cloudflare:workers';
+import { randomUUID } from 'node:crypto';
 
 export const settlementsRouter = createTRPCRouter({
   list: groupMemberProcedure
@@ -41,12 +44,7 @@ export const settlementsRouter = createTRPCRouter({
         fromId: z.string().optional(),
         toId: z.string(),
         amount: z.number().int().positive().max(MAX_MONEY_CENTS),
-        currency: z
-          .string()
-          .length(3)
-          .regex(/^[a-zA-Z]{3}$/)
-          .transform((c) => c.toUpperCase())
-          .default('USD'),
+        currency: currencySchema,
         exchangeRate: z.number().positive().finite().max(1_000_000).optional(), // manual override
         note: z.string().max(500).optional(),
       }),
@@ -97,7 +95,7 @@ export const settlementsRouter = createTRPCRouter({
       }
 
       // Currency conversion: compute base currency amount if currencies differ
-      const groupCurrency = group?.currency ?? 'USD';
+      const groupCurrency = group?.currency ?? APP_CURRENCY;
       let exchangeRate: number | null = null;
       let baseCurrencyAmount: number | null = null;
 
@@ -118,33 +116,36 @@ export const settlementsRouter = createTRPCRouter({
         baseCurrencyAmount = convertCents(input.amount, exchangeRate);
       }
 
-      const settlement = await ctx.db.$transaction(async (tx) => {
-        const created = await tx.settlement.create({
-          data: {
-            groupId: input.groupId,
-            fromId: effectiveFromId,
-            toId: input.toId,
-            amount: input.amount,
-            currency: input.currency,
-            exchangeRate: exchangeRate ?? 1.0,
-            baseCurrencyAmount,
-            ...(input.note !== undefined ? { note: input.note } : {}),
-          },
-        });
-
-        await tx.activityLog.create({
-          data: {
-            groupId: input.groupId,
-            userId: ctx.user.id,
-            type: 'SETTLEMENT_CREATED',
-            entityId: created.id,
-            metadata: { toId: input.toId, amount: input.amount },
-          },
-        });
-
-        return created;
-      });
-
-      return settlement;
+      const settlementId = randomUUID();
+      const now = new Date().toISOString();
+      await env.DB.batch([
+        env.DB.prepare(
+          `INSERT INTO Settlement (id, groupId, fromId, toId, amount, currency, exchangeRate,
+          baseCurrencyAmount, note, settledAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).bind(
+          settlementId,
+          input.groupId,
+          effectiveFromId,
+          input.toId,
+          input.amount,
+          input.currency,
+          exchangeRate ?? 1,
+          baseCurrencyAmount,
+          input.note ?? null,
+          now,
+        ),
+        env.DB.prepare(
+          `INSERT INTO ActivityLog (id, groupId, userId, type, entityId, metadata, createdAt)
+          VALUES (?, ?, ?, 'SETTLEMENT_CREATED', ?, ?, ?)`,
+        ).bind(
+          randomUUID(),
+          input.groupId,
+          ctx.user.id,
+          settlementId,
+          JSON.stringify({ toId: input.toId, amount: input.amount }),
+          now,
+        ),
+      ]);
+      return ctx.db.settlement.findUniqueOrThrow({ where: { id: settlementId } });
     }),
 });

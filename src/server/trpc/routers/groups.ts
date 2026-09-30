@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import type { PrismaClient } from '@/generated/prisma/client';
 import { createTRPCRouter, protectedProcedure, groupMemberProcedure } from '../init';
 import { stripUndefined } from '../../lib/strip-undefined';
+import { currencySchema, optionalCurrencySchema } from '@/lib/currencies';
+import { env } from 'cloudflare:workers';
+import { randomUUID } from 'node:crypto';
 
 export const groupsRouter = createTRPCRouter({
   list: protectedProcedure.query(async ({ ctx }) => {
@@ -81,28 +83,24 @@ export const groupsRouter = createTRPCRouter({
       z.object({
         name: z.string().min(1).max(100),
         description: z.string().max(500).optional(),
-        currency: z
-          .string()
-          .length(3)
-          .regex(/^[a-zA-Z]{3}$/)
-          .transform((c) => c.toUpperCase())
-          .default('USD'),
+        currency: currencySchema,
         emoji: z.string().max(4).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const group = await ctx.db.group.create({
-        data: {
-          ...stripUndefined(input),
-          members: {
-            create: {
-              userId: ctx.user.id,
-              role: 'OWNER',
-            },
-          },
-        },
-      });
-      return group;
+      const groupId = randomUUID();
+      const now = new Date().toISOString();
+      await env.DB.batch([
+        env.DB.prepare(
+          `INSERT INTO "Group" (id, name, description, currency, emoji, simplifyDebts, createdAt, updatedAt)
+          VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+        ).bind(groupId, input.name, input.description ?? null, input.currency, input.emoji ?? '💰', now, now),
+        env.DB.prepare(
+          `INSERT INTO GroupMember (id, userId, groupId, role, joinedAt)
+          VALUES (?, ?, ?, 'OWNER', ?)`,
+        ).bind(randomUUID(), ctx.user.id, groupId, now),
+      ]);
+      return ctx.db.group.findUniqueOrThrow({ where: { id: groupId } });
     }),
 
   update: groupMemberProcedure
@@ -111,12 +109,7 @@ export const groupsRouter = createTRPCRouter({
         groupId: z.string(),
         name: z.string().min(1).max(100).optional(),
         description: z.string().max(500).optional(),
-        currency: z
-          .string()
-          .length(3)
-          .regex(/^[a-zA-Z]{3}$/)
-          .transform((c) => c.toUpperCase())
-          .optional(),
+        currency: optionalCurrencySchema,
         emoji: z.string().max(4).optional(),
         simplifyDebts: z.boolean().optional(),
       }),
@@ -200,213 +193,36 @@ export const groupsRouter = createTRPCRouter({
     return group;
   }),
 
-  createInvite: groupMemberProcedure
-    .input(
-      z.object({
-        groupId: z.string(),
-        email: z.string().email().optional(),
-        placeholderUserId: z.string().optional(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      if (input.placeholderUserId) {
-        // Linking an invite to a placeholder hands the redeemer that
-        // placeholder's financial history, so gate it like the other
-        // placeholder operations (create/rename/merge are owner/admin-only).
-        if (ctx.membership.role !== 'OWNER' && ctx.membership.role !== 'ADMIN') {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Only admins and owners can create placeholder-linked invites',
-          });
-        }
-        const placeholder = await ctx.db.user.findUnique({
-          where: { id: input.placeholderUserId },
-          select: { isPlaceholder: true },
-        });
-        if (!placeholder?.isPlaceholder) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Not a placeholder user' });
-        }
-        const membership = await ctx.db.groupMember.findUnique({
-          where: { userId_groupId: { userId: input.placeholderUserId, groupId: input.groupId } },
-        });
-        if (!membership) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Placeholder is not a member of this group' });
-        }
-      }
-      const invite = await ctx.db.groupInvite.create({
-        data: {
-          groupId: input.groupId,
-          ...(input.email !== undefined ? { email: input.email } : {}),
-          ...(input.placeholderUserId !== undefined ? { placeholderUserId: input.placeholderUserId } : {}),
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        },
-      });
-      return { token: invite.token };
-    }),
-
-  joinByInvite: protectedProcedure.input(z.object({ token: z.string() })).mutation(async ({ ctx, input }) => {
-    const invite = await ctx.db.groupInvite.findUnique({
-      where: { token: input.token },
-    });
-    if (!invite || invite.usedAt || invite.expiresAt < new Date()) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Invalid or expired invite' });
-    }
-
-    const existing = await ctx.db.groupMember.findUnique({
-      where: {
-        userId_groupId: { userId: ctx.user.id, groupId: invite.groupId },
-      },
-    });
-    if (existing) {
-      // Intentional: invite links are reusable for navigation purposes.
-      // usedAt/usedById only track the first redemption that creates a membership.
-      // An already-member user can still use the link to navigate to the group.
-      return { groupId: invite.groupId, alreadyMember: true };
-    }
-
-    await ctx.db.$transaction([
-      ctx.db.groupMember.create({
-        data: { userId: ctx.user.id, groupId: invite.groupId },
-      }),
-      ctx.db.groupInvite.update({
-        where: { id: invite.id },
-        data: { usedAt: new Date(), usedById: ctx.user.id },
-      }),
-      ctx.db.activityLog.create({
-        data: {
-          groupId: invite.groupId,
-          userId: ctx.user.id,
-          type: 'MEMBER_JOINED',
-        },
-      }),
-    ]);
-
-    // Auto-merge placeholder if invite was linked to one. Re-validate at
-    // redemption: the linked user must still be a placeholder member of this
-    // group (it may have been merged, removed, or never have been valid).
-    if (invite.placeholderUserId) {
-      const placeholder = await ctx.db.user.findUnique({
-        where: { id: invite.placeholderUserId },
-        select: { isPlaceholder: true },
-      });
-      const placeholderMembership = placeholder?.isPlaceholder
-        ? await ctx.db.groupMember.findUnique({
-            where: {
-              userId_groupId: { userId: invite.placeholderUserId, groupId: invite.groupId },
-            },
-          })
-        : null;
-      if (placeholder?.isPlaceholder && placeholderMembership) {
-        await mergePlaceholderIntoUser(ctx.db, invite.placeholderUserId, ctx.user.id, invite.groupId);
-      }
-    }
-
-    return { groupId: invite.groupId, alreadyMember: false };
-  }),
-
   removeMember: groupMemberProcedure
     .input(z.object({ groupId: z.string(), userId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const isSelf = input.userId === ctx.user.id;
-      const isAdmin = ctx.membership.role === 'OWNER' || ctx.membership.role === 'ADMIN';
-
-      if (!isSelf && !isAdmin) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Cannot remove other members' });
-      }
-
-      const targetMember = await ctx.db.groupMember.findUnique({
+      const member = await ctx.db.groupMember.findUnique({
         where: { userId_groupId: { userId: input.userId, groupId: input.groupId } },
+        include: { user: { select: { isPlaceholder: true } } },
       });
-      if (!targetMember) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Member not found' });
-      }
-      if (targetMember.role === 'OWNER' && !isSelf) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Cannot remove the owner' });
-      }
-
-      const targetUser = await ctx.db.user.findUnique({
-        where: { id: input.userId },
-        select: { isPlaceholder: true },
-      });
-
-      if (targetUser?.isPlaceholder) {
-        // Placeholder cleanup: redistribute shares, reassign expenses, then hard-delete the user
-        await ctx.db.$transaction(async (tx) => {
-          // 1. Redistribute expense shares to each expense's payer
-          const shares = await tx.expenseShare.findMany({
-            where: { userId: input.userId, expense: { groupId: input.groupId } },
-            include: { expense: { select: { paidById: true } } },
-          });
-
-          for (const share of shares) {
-            // If the placeholder was the payer, redistribute to the acting admin
-            const payerId = share.expense.paidById === input.userId ? ctx.user.id : share.expense.paidById;
-
-            const existing = await tx.expenseShare.findUnique({
-              where: { expenseId_userId: { expenseId: share.expenseId, userId: payerId } },
-            });
-            if (existing) {
-              await tx.expenseShare.update({
-                where: { id: existing.id },
-                data: { amount: existing.amount + share.amount },
-              });
-            } else {
-              await tx.expenseShare.create({
-                data: { expenseId: share.expenseId, userId: payerId, amount: share.amount },
-              });
-            }
-            await tx.expenseShare.delete({ where: { id: share.id } });
-          }
-
-          // 2. Reassign expenses where the placeholder was payer or creator
-          await tx.expense.updateMany({
-            where: { paidById: input.userId, groupId: input.groupId },
-            data: { paidById: ctx.user.id },
-          });
-          await tx.expense.updateMany({
-            where: { addedById: input.userId, groupId: input.groupId },
-            data: { addedById: ctx.user.id },
-          });
-
-          // 3. Delete settlements involving the placeholder in this group
-          await tx.settlement.deleteMany({
-            where: { groupId: input.groupId, OR: [{ fromId: input.userId }, { toId: input.userId }] },
-          });
-
-          // 4. Delete receipt item assignments for the placeholder
-          await tx.receiptItemAssignment.deleteMany({ where: { userId: input.userId } });
-
-          // 5. Delete any activity log entries for the placeholder
-          await tx.activityLog.deleteMany({ where: { userId: input.userId } });
-
-          // 6. Log the removal before deleting the user
-          await tx.activityLog.create({
-            data: {
-              groupId: input.groupId,
-              userId: ctx.user.id,
-              type: 'MEMBER_LEFT',
-              metadata: { removedUserId: input.userId, wasPlaceholder: true },
-            },
-          });
-
-          // 7. Delete the placeholder user record (GroupMember cascades automatically)
-          await tx.user.delete({ where: { id: input.userId } });
+      if (!member?.user.isPlaceholder)
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Only participant records can be removed' });
+      const [shares, expenses, settlements, assignments] = await Promise.all([
+        ctx.db.expenseShare.count({ where: { userId: input.userId } }),
+        ctx.db.expense.count({ where: { OR: [{ paidById: input.userId }, { addedById: input.userId }] } }),
+        ctx.db.settlement.count({ where: { OR: [{ fromId: input.userId }, { toId: input.userId }] } }),
+        ctx.db.receiptItemAssignment.count({ where: { userId: input.userId } }),
+      ]);
+      if (shares + expenses + settlements + assignments > 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'This participant has financial history and cannot be removed. Rename them instead.',
         });
-      } else {
-        // Real user — preserve financial history, just remove the membership
-        await ctx.db.$transaction([
-          ctx.db.groupMember.delete({ where: { id: targetMember.id } }),
-          ctx.db.activityLog.create({
-            data: {
-              groupId: input.groupId,
-              userId: ctx.user.id,
-              type: 'MEMBER_LEFT',
-              metadata: { removedUserId: input.userId },
-            },
-          }),
-        ]);
       }
-
+      await ctx.db.user.delete({ where: { id: input.userId } });
+      await ctx.db.activityLog.create({
+        data: {
+          groupId: input.groupId,
+          userId: ctx.user.id,
+          type: 'MEMBER_LEFT',
+          metadata: { removedUserId: input.userId, wasPlaceholder: true },
+        },
+      });
       return { success: true };
     }),
 
@@ -422,33 +238,29 @@ export const groupsRouter = createTRPCRouter({
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins and owners can add placeholder members' });
       }
 
-      const { randomUUID } = await import('crypto');
-      const placeholderEmail = `placeholder-${randomUUID()}@placeholder.local`;
-
-      const user = await ctx.db.user.create({
-        data: {
-          email: placeholderEmail,
-          name: input.name,
-          isPlaceholder: true,
-          placeholderName: input.name,
-          createdByUserId: ctx.user.id,
-        },
-      });
-
-      await ctx.db.groupMember.create({
-        data: { userId: user.id, groupId: input.groupId },
-      });
-
-      await ctx.db.activityLog.create({
-        data: {
-          groupId: input.groupId,
-          userId: ctx.user.id,
-          type: 'PLACEHOLDER_CREATED',
-          metadata: { placeholderName: input.name, placeholderUserId: user.id },
-        },
-      });
-
-      return { id: user.id, name: user.name, isPlaceholder: true };
+      const userId = randomUUID();
+      const now = new Date().toISOString();
+      await env.DB.batch([
+        env.DB.prepare(
+          `INSERT INTO User (id, name, email, isPlaceholder, placeholderName, createdByUserId,
+          createdAt, updatedAt) VALUES (?, ?, ?, 1, ?, ?, ?, ?)`,
+        ).bind(userId, input.name, `placeholder-${userId}@placeholder.local`, input.name, ctx.user.id, now, now),
+        env.DB.prepare(
+          `INSERT INTO GroupMember (id, userId, groupId, role, joinedAt)
+          VALUES (?, ?, ?, 'MEMBER', ?)`,
+        ).bind(randomUUID(), userId, input.groupId, now),
+        env.DB.prepare(
+          `INSERT INTO ActivityLog (id, groupId, userId, type, metadata, createdAt)
+          VALUES (?, ?, ?, 'PLACEHOLDER_CREATED', ?, ?)`,
+        ).bind(
+          randomUUID(),
+          input.groupId,
+          ctx.user.id,
+          JSON.stringify({ placeholderName: input.name, placeholderUserId: userId }),
+          now,
+        ),
+      ]);
+      return { id: userId, name: input.name, isPlaceholder: true };
     }),
 
   renamePlaceholder: groupMemberProcedure
@@ -472,171 +284,4 @@ export const groupsRouter = createTRPCRouter({
         data: { placeholderName: input.name, name: input.name },
       });
     }),
-
-  mergePlaceholder: groupMemberProcedure
-    .input(
-      z.object({
-        groupId: z.string(),
-        placeholderUserId: z.string(),
-        realUserId: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      if (ctx.membership.role !== 'OWNER' && ctx.membership.role !== 'ADMIN') {
-        throw new TRPCError({ code: 'FORBIDDEN' });
-      }
-
-      const placeholder = await ctx.db.user.findUnique({
-        where: { id: input.placeholderUserId },
-      });
-      if (!placeholder?.isPlaceholder) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Not a placeholder user' });
-      }
-
-      const placeholderMember = await ctx.db.groupMember.findUnique({
-        where: { userId_groupId: { userId: input.placeholderUserId, groupId: input.groupId } },
-      });
-      if (!placeholderMember) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Placeholder is not a member of this group' });
-      }
-
-      // Verify realUserId is a member of the same group
-      const realUserMember = await ctx.db.groupMember.findUnique({
-        where: {
-          userId_groupId: { userId: input.realUserId, groupId: input.groupId },
-        },
-      });
-      if (!realUserMember) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Target user is not a member of this group',
-        });
-      }
-
-      await mergePlaceholderIntoUser(ctx.db, input.placeholderUserId, input.realUserId, input.groupId);
-
-      return { success: true };
-    }),
 });
-
-/**
- * Merge all references from a placeholder user into a real user, then delete the placeholder.
- */
-async function mergePlaceholderIntoUser(
-  db: PrismaClient,
-  placeholderUserId: string,
-  realUserId: string,
-  groupId: string,
-) {
-  await db.$transaction(async (tx) => {
-    // Hard guard: this helper reassigns financial history and may delete the
-    // user row, so it must never run against a real (non-placeholder) account.
-    const placeholder = await tx.user.findUnique({
-      where: { id: placeholderUserId },
-      select: { isPlaceholder: true },
-    });
-    if (!placeholder?.isPlaceholder) {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Not a placeholder user' });
-    }
-
-    const groupExpenseIds = (
-      await tx.expense.findMany({
-        where: { groupId },
-        select: { id: true },
-      })
-    ).map((e) => e.id);
-
-    const shares = await tx.expenseShare.findMany({
-      where: { userId: placeholderUserId, expenseId: { in: groupExpenseIds } },
-    });
-    for (const share of shares) {
-      const existing = await tx.expenseShare.findUnique({
-        where: { expenseId_userId: { expenseId: share.expenseId, userId: realUserId } },
-      });
-      if (existing) {
-        await tx.expenseShare.update({
-          where: { id: existing.id },
-          data: { amount: existing.amount + share.amount },
-        });
-        await tx.expenseShare.delete({ where: { id: share.id } });
-      } else {
-        await tx.expenseShare.update({
-          where: { id: share.id },
-          data: { userId: realUserId },
-        });
-      }
-    }
-
-    const groupReceiptItemIds = (
-      await tx.receiptItem.findMany({
-        where: {
-          receipt: {
-            OR: [{ expense: { groupId } }, { groupId }],
-          },
-        },
-        select: { id: true },
-      })
-    ).map((ri) => ri.id);
-    if (groupReceiptItemIds.length > 0) {
-      const placeholderAssignments = await tx.receiptItemAssignment.findMany({
-        where: { userId: placeholderUserId, receiptItemId: { in: groupReceiptItemIds } },
-      });
-      for (const assignment of placeholderAssignments) {
-        const existing = await tx.receiptItemAssignment.findFirst({
-          where: { receiptItemId: assignment.receiptItemId, userId: realUserId },
-        });
-        if (existing) {
-          await tx.receiptItemAssignment.delete({ where: { id: assignment.id } });
-        } else {
-          await tx.receiptItemAssignment.update({
-            where: { id: assignment.id },
-            data: { userId: realUserId },
-          });
-        }
-      }
-    }
-
-    await tx.expense.updateMany({
-      where: { paidById: placeholderUserId, groupId },
-      data: { paidById: realUserId },
-    });
-    await tx.expense.updateMany({
-      where: { addedById: placeholderUserId, groupId },
-      data: { addedById: realUserId },
-    });
-
-    await tx.settlement.updateMany({
-      where: { fromId: placeholderUserId, groupId },
-      data: { fromId: realUserId },
-    });
-    await tx.settlement.updateMany({
-      where: { toId: placeholderUserId, groupId },
-      data: { toId: realUserId },
-    });
-
-    await tx.activityLog.updateMany({
-      where: { userId: placeholderUserId, groupId },
-      data: { userId: realUserId },
-    });
-
-    await tx.groupMember.deleteMany({
-      where: { userId: placeholderUserId, groupId },
-    });
-
-    await tx.activityLog.create({
-      data: {
-        groupId,
-        userId: realUserId,
-        type: 'PLACEHOLDER_MERGED',
-        metadata: { mergedPlaceholderId: placeholderUserId },
-      },
-    });
-
-    const remainingMemberships = await tx.groupMember.count({
-      where: { userId: placeholderUserId },
-    });
-    if (remainingMemberships === 0) {
-      await tx.user.delete({ where: { id: placeholderUserId } });
-    }
-  });
-}

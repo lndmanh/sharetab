@@ -4,7 +4,10 @@ import { createTRPCRouter, groupMemberProcedure } from '../init';
 import { SplitMode } from '@/generated/prisma/client';
 import { getExchangeRate, convertCents } from '../../lib/exchange-rates';
 import { MAX_MONEY_CENTS } from '@/lib/money';
-import { stripUndefined } from '../../lib/strip-undefined';
+import { APP_CURRENCY, currencySchema, optionalCurrencySchema } from '@/lib/currencies';
+import { env } from 'cloudflare:workers';
+import { randomUUID } from 'node:crypto';
+import { requireD1Row, clearD1Guard } from '../../lib/d1-atomic';
 
 const expenseShareSchema = z.object({
   userId: z.string(),
@@ -81,12 +84,7 @@ export const expensesRouter = createTRPCRouter({
         title: z.string().min(1).max(200),
         description: z.string().max(1000).optional(),
         amount: z.number().int().positive().max(MAX_MONEY_CENTS),
-        currency: z
-          .string()
-          .length(3)
-          .regex(/^[a-zA-Z]{3}$/)
-          .transform((c) => c.toUpperCase())
-          .default('USD'),
+        currency: currencySchema,
         exchangeRate: exchangeRateSchema.optional(), // manual override
         category: z.string().max(50).optional(),
         expenseDate: z.string().datetime().optional(),
@@ -142,7 +140,7 @@ export const expensesRouter = createTRPCRouter({
       let exchangeRate: number | null = null;
       let baseCurrencyAmount: number | null = null;
 
-      const groupCurrency = group?.currency ?? 'USD';
+      const groupCurrency = group?.currency ?? APP_CURRENCY;
       if (input.currency.toUpperCase() !== groupCurrency.toUpperCase()) {
         if (input.exchangeRate) {
           // Manual override
@@ -165,50 +163,50 @@ export const expensesRouter = createTRPCRouter({
         baseCurrencyAmount = convertCents(input.amount, exchangeRate);
       }
 
-      const expense = await ctx.db.$transaction(async (tx) => {
-        const created = await tx.expense.create({
-          data: {
-            groupId: input.groupId,
-            title: input.title,
-            ...(input.description !== undefined ? { description: input.description } : {}),
-            amount: input.amount,
-            currency: input.currency,
-            exchangeRate: exchangeRate ?? 1.0,
-            baseCurrencyAmount,
-            ...(input.category !== undefined ? { category: input.category } : {}),
-            expenseDate: input.expenseDate ? new Date(input.expenseDate) : new Date(),
-            paidById: input.paidById,
-            addedById: ctx.user.id,
-            splitMode: input.splitMode,
-            ...(input.receiptId !== undefined ? { receiptId: input.receiptId } : {}),
-            shares: {
-              create: input.shares.map((s) => ({
-                userId: s.userId,
-                amount: s.amount,
-                shares: s.shares ?? 1,
-                ...(s.percentage !== undefined ? { percentage: s.percentage } : {}),
-              })),
-            },
-          },
-          include: {
-            shares: true,
-          },
-        });
-
-        await tx.activityLog.create({
-          data: {
-            groupId: input.groupId,
-            userId: ctx.user.id,
-            type: 'EXPENSE_CREATED',
-            entityId: created.id,
-            metadata: { title: input.title, amount: input.amount },
-          },
-        });
-
-        return created;
-      });
-
-      return expense;
+      const expenseId = randomUUID();
+      const now = new Date().toISOString();
+      await env.DB.batch([
+        env.DB.prepare(
+          `INSERT INTO Expense (id, groupId, title, description, amount, currency, exchangeRate,
+          baseCurrencyAmount, category, expenseDate, paidById, addedById, splitMode, receiptId, createdAt, updatedAt)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).bind(
+          expenseId,
+          input.groupId,
+          input.title,
+          input.description ?? null,
+          input.amount,
+          input.currency,
+          exchangeRate ?? 1,
+          baseCurrencyAmount,
+          input.category ?? null,
+          input.expenseDate ?? now,
+          input.paidById,
+          ctx.user.id,
+          input.splitMode,
+          input.receiptId ?? null,
+          now,
+          now,
+        ),
+        ...input.shares.map((share) =>
+          env.DB.prepare(
+            `INSERT INTO ExpenseShare
+          (id, expenseId, userId, amount, shares, percentage) VALUES (?, ?, ?, ?, ?, ?)`,
+          ).bind(randomUUID(), expenseId, share.userId, share.amount, share.shares ?? 1, share.percentage ?? null),
+        ),
+        env.DB.prepare(
+          `INSERT INTO ActivityLog (id, groupId, userId, type, entityId, metadata, createdAt)
+          VALUES (?, ?, ?, 'EXPENSE_CREATED', ?, ?, ?)`,
+        ).bind(
+          randomUUID(),
+          input.groupId,
+          ctx.user.id,
+          expenseId,
+          JSON.stringify({ title: input.title, amount: input.amount }),
+          now,
+        ),
+      ]);
+      return ctx.db.expense.findUniqueOrThrow({ where: { id: expenseId }, include: { shares: true } });
     }),
 
   update: groupMemberProcedure
@@ -220,12 +218,7 @@ export const expensesRouter = createTRPCRouter({
           title: z.string().min(1).max(200).optional(),
           description: z.string().max(1000).optional(),
           amount: z.number().int().positive().max(MAX_MONEY_CENTS).optional(),
-          currency: z
-            .string()
-            .length(3)
-            .regex(/^[a-zA-Z]{3}$/)
-            .transform((c) => c.toUpperCase())
-            .optional(),
+          currency: optionalCurrencySchema,
           exchangeRate: exchangeRateSchema.optional(), // manual override
           category: z.string().max(50).optional(),
           expenseDate: z.string().datetime().optional(),
@@ -305,7 +298,7 @@ export const expensesRouter = createTRPCRouter({
       // Recompute currency conversion if currency or amount changed
       const effectiveCurrency = inputCurrency ?? existing.currency;
       const effectiveAmount = data.amount ?? existing.amount;
-      const groupCurrency = groupCheck?.currency ?? 'USD';
+      const groupCurrency = groupCheck?.currency ?? APP_CURRENCY;
       let newExchangeRate: number | null = existing.exchangeRate;
       let newBaseCurrencyAmount: number | null = existing.baseCurrencyAmount;
 
@@ -331,45 +324,59 @@ export const expensesRouter = createTRPCRouter({
         newBaseCurrencyAmount = null;
       }
 
-      const expense = await ctx.db.$transaction(async (tx) => {
-        if (shares) {
-          await tx.expenseShare.deleteMany({ where: { expenseId } });
-          await tx.expenseShare.createMany({
-            data: shares.map((s) => ({
-              expenseId,
-              userId: s.userId,
-              amount: s.amount,
-              shares: s.shares ?? 1,
-              ...(s.percentage !== undefined ? { percentage: s.percentage } : {}),
-            })),
-          });
-        }
-
-        const updated = await tx.expense.update({
-          where: { id: expenseId },
-          data: {
-            ...stripUndefined(data),
-            ...(inputCurrency ? { currency: inputCurrency } : {}),
-            exchangeRate: newExchangeRate ?? 1.0,
-            baseCurrencyAmount: newBaseCurrencyAmount,
-            ...(data.expenseDate ? { expenseDate: new Date(data.expenseDate) } : {}),
-          },
-          include: { shares: true },
-        });
-
-        await tx.activityLog.create({
-          data: {
-            groupId,
-            userId: ctx.user.id,
-            type: 'EXPENSE_UPDATED',
-            entityId: expenseId,
-          },
-        });
-
-        return updated;
-      });
-
-      return expense;
+      const now = new Date().toISOString();
+      await env.DB.batch([
+        requireD1Row(
+          'SELECT 1 FROM Expense WHERE id = ? AND groupId = ? AND revision = ?',
+          expenseId,
+          groupId,
+          existing.revision,
+        ),
+        env.DB.prepare(
+          `UPDATE Expense SET title = ?, description = ?, amount = ?, currency = ?, exchangeRate = ?,
+          baseCurrencyAmount = ?, category = ?, expenseDate = ?, paidById = ?, splitMode = ?, updatedAt = ?, revision = revision + 1
+          WHERE id = ? AND groupId = ? AND revision = ?`,
+        ).bind(
+          data.title ?? existing.title,
+          data.description ?? existing.description,
+          effectiveAmount,
+          effectiveCurrency,
+          newExchangeRate ?? 1,
+          newBaseCurrencyAmount,
+          data.category ?? existing.category,
+          data.expenseDate ?? existing.expenseDate.toISOString(),
+          data.paidById ?? existing.paidById,
+          data.splitMode ?? existing.splitMode,
+          now,
+          expenseId,
+          groupId,
+          existing.revision,
+        ),
+        ...(shares
+          ? [
+              env.DB.prepare('DELETE FROM ExpenseShare WHERE expenseId = ?').bind(expenseId),
+              ...shares.map((share) =>
+                env.DB.prepare(
+                  `INSERT INTO ExpenseShare
+            (id, expenseId, userId, amount, shares, percentage) VALUES (?, ?, ?, ?, ?, ?)`,
+                ).bind(
+                  randomUUID(),
+                  expenseId,
+                  share.userId,
+                  share.amount,
+                  share.shares ?? 1,
+                  share.percentage ?? null,
+                ),
+              ),
+            ]
+          : []),
+        env.DB.prepare(
+          `INSERT INTO ActivityLog (id, groupId, userId, type, entityId, createdAt)
+          VALUES (?, ?, ?, 'EXPENSE_UPDATED', ?, ?)`,
+        ).bind(randomUUID(), groupId, ctx.user.id, expenseId, now),
+        clearD1Guard(),
+      ]);
+      return ctx.db.expense.findUniqueOrThrow({ where: { id: expenseId }, include: { shares: true } });
     }),
 
   delete: groupMemberProcedure
@@ -402,19 +409,27 @@ export const expensesRouter = createTRPCRouter({
         });
       }
 
-      await ctx.db.$transaction(async (tx) => {
-        await tx.expense.delete({ where: { id: input.expenseId } });
-
-        await tx.activityLog.create({
-          data: {
-            groupId: input.groupId,
-            userId: ctx.user.id,
-            type: 'EXPENSE_DELETED',
-            entityId: input.expenseId,
-            metadata: { title: expense.title, amount: expense.amount },
-          },
-        });
-      });
+      await env.DB.batch([
+        requireD1Row(
+          'SELECT 1 FROM Expense WHERE id = ? AND groupId = ? AND revision = ?',
+          input.expenseId,
+          input.groupId,
+          expense.revision,
+        ),
+        env.DB.prepare('DELETE FROM Expense WHERE id = ? AND groupId = ?').bind(input.expenseId, input.groupId),
+        env.DB.prepare(
+          `INSERT INTO ActivityLog (id, groupId, userId, type, entityId, metadata, createdAt)
+          VALUES (?, ?, ?, 'EXPENSE_DELETED', ?, ?, ?)`,
+        ).bind(
+          randomUUID(),
+          input.groupId,
+          ctx.user.id,
+          input.expenseId,
+          JSON.stringify({ title: expense.title, amount: expense.amount }),
+          new Date().toISOString(),
+        ),
+        clearD1Guard(),
+      ]);
 
       return { success: true };
     }),
