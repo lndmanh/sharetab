@@ -1,67 +1,21 @@
-import { NextRequest } from 'next/server';
-import { auth } from '@/server/auth';
-import { db } from '@/server/db';
-import { readFile, stat } from 'fs/promises';
-import { resolveUploadPath } from '@/server/lib/upload-dir';
+import { env } from 'cloudflare:workers';
+import { getDb } from '@/server/db';
 
-const MIME_TYPES: Record<string, string> = {
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  png: 'image/png',
-  webp: 'image/webp',
-  heic: 'image/heic',
-};
-
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
-  const session = await auth();
-
+export async function GET(_request: Request, { params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
-  const filePath = path.join('/');
-
-  let fullPath: string;
-  try {
-    fullPath = resolveUploadPath(filePath);
-  } catch {
-    return new Response('Forbidden', { status: 403 });
+  const imagePath = path.join('/');
+  if (!/^receipts\/[a-f0-9-]{36}\.(jpg|png|webp|heic)$/.test(imagePath)) {
+    return new Response('Not found', { status: 404 });
   }
-
-  // Verify receipt ownership
-  const receipt = await db.receipt.findFirst({
-    where: { imagePath: filePath },
-    include: { group: { include: { members: true } } },
+  const receipt = await getDb().receipt.findFirst({ where: { imagePath }, select: { mimeType: true } });
+  if (!receipt) return new Response('Not found', { status: 404 });
+  const object = await env.RECEIPTS.get(imagePath);
+  if (!object) return new Response('Not found', { status: 404 });
+  return new Response(object.body, {
+    headers: {
+      'Content-Type': receipt.mimeType,
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
+    },
   });
-
-  if (!receipt) {
-    return new Response('Not found', { status: 404 });
-  }
-
-  if (receipt.isGuest) {
-    // Guest receipts are viewable by anyone (authenticated or not)
-  } else if (session?.user?.id) {
-    // Authenticated user: must be the uploader or a member of the receipt's group
-    const isUploader = receipt.uploadedById === session.user.id;
-    const isGroupMember = receipt.group?.members.some((m: { userId: string }) => m.userId === session.user.id) ?? false;
-    if (!isUploader && !isGroupMember) {
-      return new Response('Forbidden', { status: 403 });
-    }
-  } else {
-    // Unauthenticated user trying to access non-guest receipt
-    return new Response('Unauthorized', { status: 401 });
-  }
-
-  try {
-    await stat(fullPath);
-    const buffer = await readFile(fullPath);
-    const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
-    const contentType = MIME_TYPES[ext] ?? 'application/octet-stream';
-
-    return new Response(buffer, {
-      headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'private, max-age=86400',
-      },
-    });
-  } catch {
-    return new Response('Not found', { status: 404 });
-  }
 }
