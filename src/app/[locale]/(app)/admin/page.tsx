@@ -1,29 +1,19 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import { trpc } from '@/lib/trpc';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Shield, Database, Package, Clock, FolderOpen, HardDrive, FileWarning, Loader2, RefreshCw } from 'lucide-react';
+import { Shield, Database, Package, FolderOpen, HardDrive, Loader2 } from 'lucide-react';
 
 import { AuditLogSection } from '@/components/admin/audit-log-section';
-import { RegistrationControlSection } from '@/components/admin/registration-control-section';
 import { AnnouncementSection } from '@/components/admin/announcement-section';
 import { ActivityFeedSection } from '@/components/admin/activity-feed-section';
 import { AIStatsSection } from '@/components/admin/ai-stats-section';
-import { AIProviderTestSection } from '@/components/admin/ai-provider-test-section';
-import { ToolsSection } from '@/components/admin/tools-section';
-import { ServerLogsSection } from '@/components/admin/server-logs-section';
-import { UserManagementSection } from '@/components/admin/user-management-section';
-import { GroupOverviewSection } from '@/components/admin/group-overview-section';
 import { VenmoSettingsSection } from '@/components/admin/venmo-settings-section';
 
 export default function AdminPage() {
-  const { data: session } = useSession();
   const t = useTranslations('admin');
-  const currentUserEmail = session?.user?.email;
 
   return (
     <div className="space-y-6">
@@ -35,25 +25,13 @@ export default function AdminPage() {
       <div className="grid gap-6 [&>*]:min-w-0">
         <SystemHealthSection />
         <Separator />
-        <UserManagementSection {...(currentUserEmail !== undefined ? { currentUserEmail } : {})} />
-        <Separator />
-        <GroupOverviewSection />
-        <Separator />
         <StorageStatsSection />
-        <Separator />
-        <RegistrationControlSection />
         <Separator />
         <AnnouncementSection />
         <VenmoSettingsSection />
         <Separator />
         <AIStatsSection />
-        <AIProviderTestSection />
-        <Separator />
         <ActivityFeedSection />
-        <Separator />
-        <ToolsSection />
-        <Separator />
-        <ServerLogsSection />
         <Separator />
         <AuditLogSection />
       </div>
@@ -108,23 +86,6 @@ function SystemHealthSection() {
             )}
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              {t('systemHealth.uptime')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <span className="text-sm font-medium">{data ? formatUptime(data.uptime) : '---'}</span>
-            {data?.serverStartTime && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t('systemHealth.started', { time: new Date(data.serverStartTime).toLocaleString() })}
-              </p>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </section>
   );
@@ -135,13 +96,6 @@ function SystemHealthSection() {
 function StorageStatsSection() {
   const t = useTranslations('admin');
   const storage = trpc.admin.getStorageStats.useQuery();
-  const utils = trpc.useUtils();
-  const cleanup = trpc.admin.cleanupOrphans.useMutation({
-    onSuccess: () => {
-      utils.admin.getStorageStats.invalidate();
-      utils.admin.getAuditLog.invalidate();
-    },
-  });
 
   if (storage.isLoading) return <SectionSkeleton title={t('storage.title')} />;
 
@@ -168,42 +122,12 @@ function StorageStatsSection() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <HardDrive className="h-4 w-4" />
-              {t('storage.diskUsage')}
+              Tracked receipt bytes
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{data?.totalDiskUsageFormatted ?? '0 B'}</p>
-            <p className="text-xs text-muted-foreground">{t('storage.filesOnDisk', { count: data?.diskFiles ?? 0 })}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="@2xl:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <FileWarning className="h-4 w-4" />
-                {t('storage.orphanedFiles')}
-              </span>
-              {(data?.orphanCount ?? 0) > 0 && (
-                <Button size="sm" variant="destructive" onClick={() => cleanup.mutate()} disabled={cleanup.isPending}>
-                  {cleanup.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                  )}
-                  {t('storage.cleanUp')}
-                </Button>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{data?.orphanCount ?? 0}</p>
-            <p className="text-xs text-muted-foreground">{t('storage.orphanDescription')}</p>
-            {cleanup.isSuccess && (
-              <p className="mt-2 text-sm text-green-600">
-                {t('storage.cleanedUp', { count: cleanup.data.deletedCount, size: cleanup.data.freedBytesFormatted })}
-              </p>
-            )}
+            <p className="text-2xl font-bold">{formatBytes(data?.storedBytes ?? 0)}</p>
+            <p className="text-xs text-muted-foreground">Private R2 bucket · {data?.bucket ?? 'unknown'}</p>
           </CardContent>
         </Card>
       </div>
@@ -226,15 +150,8 @@ function SectionSkeleton({ title }: { title: string }) {
   );
 }
 
-function formatUptime(seconds: number): string {
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-
-  const parts: string[] = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  parts.push(`${minutes}m`);
-
-  return parts.join(' ');
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
 }

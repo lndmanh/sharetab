@@ -63,7 +63,7 @@ export function AIStatsSection() {
                 {Object.entries(data.byProvider).map(([provider, count]) => (
                   <div key={provider} className="flex items-center justify-between">
                     <span className="text-sm font-medium">{provider}</span>
-                    <span className="text-sm text-muted-foreground">{count}</span>
+                    <span className="text-sm text-muted-foreground">{typeof count === 'number' ? count : 0}</span>
                   </div>
                 ))}
               </div>
