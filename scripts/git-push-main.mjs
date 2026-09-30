@@ -1,7 +1,7 @@
 import { ensureCleanWorktree, parseArgs, run } from './lib/release-utils.mjs';
 
 function printUsage() {
-  console.log('Usage: npm run push:main');
+  console.log('Usage: pnpm run push:main');
 }
 
 try {

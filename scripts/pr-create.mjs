@@ -8,7 +8,7 @@ import {
 } from './lib/release-utils.mjs';
 
 function printUsage() {
-  console.log('Usage: npm run pr:create -- [--base main] [--title "Title"] [--body "Body"] [--body-file path]');
+  console.log('Usage: pnpm run pr:create -- [--base main] [--title "Title"] [--body "Body"] [--body-file path]');
 }
 
 try {
